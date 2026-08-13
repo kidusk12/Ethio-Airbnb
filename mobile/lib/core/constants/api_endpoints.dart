@@ -1,7 +1,7 @@
 class ApiEndpoints {
   ApiEndpoints._();
 
-  static const String baseUrl = 'https://api.ethio-airbnb.com/api';
+  static const String baseUrl = 'http://localhost:4000/api';
 
   // Auth
   static const String register = '/auth/register';

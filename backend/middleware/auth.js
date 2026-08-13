@@ -1,4 +1,7 @@
 const jwt = require('jsonwebtoken');
+// Verifies the Authorization: Bearer <token> header.
+// On success, attaches the decoded payload (id, role) to req.user.
+// On failure, responds 401 directly — routes using this never run if the token's bad.
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
