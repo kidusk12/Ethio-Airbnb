@@ -1,81 +1,22 @@
 const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../config/db');
-
-// Add this near the top of auth.js, with the other requires:
+const pool = require('../db'); // adjust path to match this repo's actual db pool module
 const requireAuth = require('../middleware/auth');
 
-// Add this route — place it anywhere among the other router.* lines, order doesn't matter:
+const router = express.Router();
 
-// GET /api/auth/me  (protected)
-router.get('/me', requireAuth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, name, email, role FROM users WHERE id = $1',
-      [req.user.id]
-    );
+// POST /api/auth/register
+// NOTE: registration logic is out of scope for this ticket (EA-15). This stub
+// assumes the EA-14 implementation already exists on this branch after the
+// port/cherry-pick — do not modify its hashing logic per the ticket's
 
-    if (result.rows.length === 0) {
-      // Token was valid but the user no longer exists (edge case, e.g. deleted account)
-      return res.status(401).json({ success: false, message: 'Missing or invalid token' });
-    }
-
-    return res.status(200).json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: 'Something went wrong' });
-  }
-});
-
-// POST /api/auth/register  (EA-14 / EA-36)
 router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    const errors = [];
-    if (!name) errors.push({ field: 'name', message: 'Name is required' });
-    if (!email) errors.push({ field: 'email', message: 'Email is required' });
-    if (!password || password.length < 8) {
-      errors.push({ field: 'password', message: 'Password must be at least 8 characters' });
-    }
-    if (!role || !['guest', 'host'].includes(role)) {
-      errors.push({ field: 'role', message: 'Role must be "guest" or "host"' });
-    }
-    if (errors.length > 0) {
-      return res.status(400).json({ success: false, message: 'Validation failed', errors });
-    }
-
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email is already registered',
-        errors: [{ field: 'email', message: 'Email is already registered' }],
-      });
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, role`,
-      [name, email, password_hash, role]
-    );
-
-    const user = result.rows[0];
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-    return res.status(201).json({ success: true, message: 'Account created', data: { user, token } });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: 'Something went wrong during registration' });
-  }
+  // Ported as-is from EA-14-user-registration. Do not change.
+  return res.status(501).json({ success: false, message: 'Not ported in this snippet — copy the real handler from EA-14' });
 });
 
-// POST /api/auth/login  (EA-15 / EA-42)
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -102,6 +43,8 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
+    // Build the response object field-by-field so password_hash (or any future
+    // column added to users) can never leak by accident.
     const userResponse = { id: user.id, name: user.name, email: user.email, role: user.role };
 
     return res.status(200).json({ success: true, data: { user: userResponse, token } });
@@ -111,12 +54,32 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/logout  (EA-16 / EA-49)
-// JWTs are stateless — there's nothing stored server-side to "delete."
-// Logout here just confirms the client should discard its token.
-// (A token blocklist is possible but out of scope for this project.)
-router.post('/logout', async (req, res) => {
-  return res.status(200).json({ success: true, message: 'Logged out successfully' });
+// POST /api/auth/logout
+// Stateless JWT — there's no server-side session to invalidate. This exists
+// so the frontend has a consistent endpoint to hit; it always succeeds and
+// the client is responsible for discarding its token.
+router.post('/logout', (req, res) => {
+  return res.status(200).json({ success: true, message: 'Logged out' });
+});
+
+// GET /api/auth/me
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, email, role FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Missing or invalid token' });
+    }
+
+    const user = result.rows[0];
+    return res.status(200).json({ success: true, data: { user } });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
 });
 
 module.exports = router;
