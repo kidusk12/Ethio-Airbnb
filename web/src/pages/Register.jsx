@@ -1,15 +1,113 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Home } from "lucide-react";
 import { AuthLayout } from "../layouts/AuthLayout";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
+import { useAuth } from "../context/AuthContext";
+import { registerUser } from "../lib/api";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function Register() {
-  const handleSubmit = (event) => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  // ── Form fields ──────────────────────────────────────
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("guest");
+
+  // ── UI state ─────────────────────────────────────────
+  const [errors, setErrors] = useState({});
+  const [generalError, setGeneralError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Client-side validation ───────────────────────────
+  function validate() {
+    const next = {};
+
+    if (!name.trim()) {
+      next.name = "Name is required";
+    }
+
+    if (!email.trim()) {
+      next.email = "Email is required";
+    } else if (!EMAIL_REGEX.test(email)) {
+      next.email = "Please enter a valid email address";
+    }
+
+    if (!password) {
+      next.password = "Password is required";
+    } else if (password.length < 8) {
+      next.password = "Password must be at least 8 characters";
+    }
+
+    if (!role || !["guest", "host"].includes(role)) {
+      next.role = 'Role must be "guest" or "host"';
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
+  // ── Clear a single field's error on change ───────────
+  function clearFieldError(field) {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const { [field]: _, ...rest } = prev;
+      return rest;
+    });
+  }
+
+  // ── Submit handler ───────────────────────────────────
+  async function handleSubmit(event) {
     event.preventDefault();
-    console.log("Registration submitted");
-  };
+
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setGeneralError("");
+    setErrors({});
+
+    try {
+      const { status, body } = await registerUser({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        role,
+      });
+
+      if (status === 201) {
+        login(body.data.user, body.data.token);
+        navigate("/home");
+        return;
+      }
+
+      // Map field-level errors from API (400 / 409)
+      if (body.errors && Array.isArray(body.errors)) {
+        const fieldErrors = {};
+        body.errors.forEach((err) => {
+          if (err.field) {
+            fieldErrors[err.field] = err.message;
+          }
+        });
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors);
+        } else {
+          setGeneralError(body.message || "Something went wrong. Please try again.");
+        }
+      } else {
+        setGeneralError(body.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      // Network failure or unexpected error
+      setGeneralError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <AuthLayout>
@@ -32,22 +130,102 @@ function Register() {
       </div>
 
       {/* FORM */}
-      <form onSubmit={handleSubmit}>
-        <Input 
-          id="email"
-          label="Email or phone number"
-          placeholder="you@example.com or +251..."
+      <form onSubmit={handleSubmit} noValidate>
+        {/* Name */}
+        <Input
+          id="name"
+          label="Full name"
+          placeholder="John Doe"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            clearFieldError("name");
+          }}
+          error={errors.name}
+          autoComplete="name"
         />
-        
-        <Input 
+
+        {/* Email */}
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            clearFieldError("email");
+          }}
+          error={errors.email}
+          autoComplete="email"
+        />
+
+        {/* Password */}
+        <Input
           id="password"
           label="Password"
           type="password"
           placeholder="At least 8 characters"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            clearFieldError("password");
+          }}
+          error={errors.password}
+          autoComplete="new-password"
         />
 
-        <Button type="submit" className="mt-2 mb-5">
-          Continue
+        {/* Role selector */}
+        <div className="mb-5">
+          <label className="block mb-1.5 text-[14px] font-medium text-gray-900">
+            I want to
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant={role === "guest" ? "primary" : "outline"}
+              className="!h-[38px]"
+              onClick={() => {
+                setRole("guest");
+                clearFieldError("role");
+              }}
+              aria-pressed={role === "guest"}
+            >
+              Book stays
+            </Button>
+            <Button
+              type="button"
+              variant={role === "host" ? "primary" : "outline"}
+              className="!h-[38px]"
+              onClick={() => {
+                setRole("host");
+                clearFieldError("role");
+              }}
+              aria-pressed={role === "host"}
+            >
+              Host guests
+            </Button>
+          </div>
+          {errors.role && (
+            <p className="mt-1 text-[13px] text-red-500" role="alert">
+              {errors.role}
+            </p>
+          )}
+        </div>
+
+        {/* General error banner */}
+        {generalError && (
+          <div
+            className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-[13px] text-red-700"
+            role="alert"
+          >
+            {generalError}
+          </div>
+        )}
+
+        {/* Submit */}
+        <Button type="submit" className="mt-2 mb-5" disabled={isSubmitting}>
+          {isSubmitting ? "Creating account\u2026" : "Continue"}
         </Button>
 
         {/* OR DIVIDER */}
