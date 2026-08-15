@@ -4,9 +4,10 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const listingRoutes = require('./routes/listings');
-const bookingRoutes = require('./routes/bookings');
-const reviewRoutes = require('./routes/reviews');
-const adminRoutes = require('./routes/admin');
+// Temporarily comment out routes not yet implemented
+// const bookingRoutes = require('./routes/bookings');
+// const reviewRoutes = require('./routes/reviews');
+// const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -16,9 +17,10 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/admin', adminRoutes);
+// Comment out the other routes for now
+// app.use('/api/bookings', bookingRoutes);
+// app.use('/api/reviews', reviewRoutes);
+// app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('Ethio-Airbnb API is running.');
