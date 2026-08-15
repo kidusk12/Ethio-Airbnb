@@ -7,11 +7,13 @@ export function Input({
   type = "text",
   placeholder, 
   className = "",
+  error = "",
   ...props 
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
   const currentType = isPassword ? (showPassword ? "text" : "password") : type;
+  const errorId = id ? `${id}-error` : undefined;
 
   return (
     <div className={`mb-4 ${className}`}>
@@ -25,7 +27,9 @@ export function Input({
           id={id}
           type={currentType}
           placeholder={placeholder}
-          className={`w-full h-[40px] rounded-lg border border-gray-200 bg-white text-gray-900 text-[14px] placeholder-gray-400 outline-none focus:border-gray-400 focus:ring-0 transition-all px-3 ${isPassword ? 'pr-[40px]' : ''}`}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={error && errorId ? errorId : undefined}
+          className={`w-full h-[40px] rounded-lg border bg-white text-gray-900 text-[14px] placeholder-gray-400 outline-none focus:ring-0 transition-all px-3 ${isPassword ? 'pr-[40px]' : ''} ${error ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-gray-400'}`}
           {...props}
         />
         {isPassword && (
@@ -38,6 +42,11 @@ export function Input({
           </button>
         )}
       </div>
+      {error && (
+        <p id={errorId} className="mt-1 text-[13px] text-red-500" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
