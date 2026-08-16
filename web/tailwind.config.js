@@ -10,6 +10,10 @@ export default {
         sans: ['Inter', 'sans-serif'],
         serif: ['Playfair Display', 'serif'],
       },
+      colors: {
+        primary: '#dd4241',
+        'muted-foreground': 'oklch(0.52 0.022 118)',
+      },
     },
   },
   plugins: [],
