@@ -1,50 +1,49 @@
 import React from "react";
-import { Star, Heart } from "lucide-react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Compass, Heart, Briefcase, MessageCircle, User } from "lucide-react";
 
-/**
- * @param {{ stay: import("../../data/mockDashboardData").SavedStay, onRemove?: (id: string) => void }} props
- */
-export function SavedStayCard({ stay, onRemove }) {
-  const { id, name, type, location, image, rating, reviews, priceETB } = stay;
+const NAV_ITEMS = [
+  { label: "Explore",   icon: Compass,      to: "/explore"                },
+  { label: "Favorites", icon: Heart,         to: "/dashboard?tab=saved"   },
+  { label: "Trips",     icon: Briefcase,     to: "/dashboard?tab=bookings" },
+  { label: "Messages",  icon: MessageCircle, to: "/dashboard?tab=messages" },
+  { label: "Profile",   icon: User,          to: "/dashboard?tab=settings" },
+];
+
+export default function MobileBottomNav() {
+  const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab");
+
+  function isActive({ to }) {
+    const [path, qs] = to.split("?");
+    const tab = qs ? new URLSearchParams(qs).get("tab") : null;
+    if (path !== pathname) return false;
+    return tab ? activeTab === tab : !activeTab;
+  }
 
   return (
-    <div className="group rounded-xl border border-stone-200 bg-white overflow-hidden">
-      <div className="relative aspect-[4/3]">
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        <button
-          type="button"
-          aria-label="Remove from saved"
-          onClick={() => onRemove?.(id)}
-          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-sm transition-colors"
-        >
-          <Heart size={15} className="fill-amber-600 text-amber-600" />
-        </button>
+    <nav
+      aria-label="Mobile navigation"
+      className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white border-t border-gray-100 shadow-[0_-1px_8px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="flex items-center justify-around h-16 px-1">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(item);
+          return (
+            <Link
+              key={item.label}
+              to={item.to}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors"
+              style={{ color: active ? "#E8473F" : "#9ca3af" }}
+            >
+              <item.icon size={21} strokeWidth={active ? 2.25 : 1.75} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
       </div>
-
-      <div className="p-3.5">
-        <p className="text-[12px] text-stone-500 mb-0.5">{type}</p>
-        <h4 className="text-[14px] font-semibold text-stone-900 mb-1 truncate">{name}</h4>
-        <div className="flex items-center gap-1 mb-1">
-          <Star size={12} className="fill-amber-400 text-amber-400" />
-          <span className="text-[12px] font-medium text-stone-700">{rating}</span>
-          <span className="text-[12px] text-stone-400">({reviews})</span>
-        </div>
-        <p className="text-[12px] text-stone-500 mb-3 truncate">{location}</p>
-
-        <div className="flex items-center justify-between">
-          <p className="text-[13px] font-semibold text-stone-900">
-            ETB {priceETB.toLocaleString()}
-            <span className="font-normal text-stone-400"> / night</span>
-          </p>
-          <button className="text-[12px] font-medium text-amber-700 hover:text-amber-800">
-            Book again
-          </button>
-        </div>
-      </div>
-    </div>
+    </nav>
   );
 }
