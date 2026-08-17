@@ -11,7 +11,7 @@ Developed as part of the INSA Cyber Talent Center, 5th Batch Summer Camp (Develo
 | Kidus Kidanewold | ctc-6808-26 |
 | Hemen Solomon    | ctc-1248-26 |
 | Makda Solomon    | ctc-867-26  |
-| Melat Worku      | ctc-857-26  |
+| Melat Worku      | ctc-875-26  |
 | Kenzo Stacy      | ctc-4900-26 |
 
 ## About the Project
