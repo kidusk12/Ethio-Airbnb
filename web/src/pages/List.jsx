@@ -10,8 +10,9 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import Navbar from '../components/NavBar';
+import Navbar1 from '../components/NavBar1';
 import Footer from '../components/Footer';
+import NavBar1 from '../components/NavBar1';
 
 const STEPS = [
   { key: 'property-type', label: 'Property type' },
@@ -676,7 +677,11 @@ const List = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <NavBar1 
+        userName="Host"
+        onProfileClick={() => {}}
+        onLogout={() => navigate('/')}
+  />
 
       {/* Main hosting wizard */}
       <section className="w-full px-6 pt-14 pb-20">

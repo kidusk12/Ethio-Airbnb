@@ -11,7 +11,8 @@ import {
   MessageSquare,
   Home,
 } from "lucide-react";
-import Navbar from "../components/NavBar";
+import Navbar1 from "../components/NavBar1";
+import NavBar1 from "../components/NavBar1";
 
 const getStoredArray = (keys) => {
   for (const key of keys) {
@@ -150,7 +151,7 @@ function Host_dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <NavBar1 />
 
       <main className="w-full px-6 py-14 md:px-10 lg:px-12">
         <div className="mx-auto max-w-[1545px]">
