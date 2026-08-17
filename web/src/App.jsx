@@ -7,6 +7,8 @@ import Host from "./pages/Host";
 import List from "./pages/List";
 import Host_dashboard from "./pages/Host_dashboard";
 import Explore from "./pages/Explore";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminProfile from "./pages/AdminProfile";
 function App() {
   return (
     <BrowserRouter>
@@ -18,6 +20,8 @@ function App() {
         <Route path="/host/list" element={<List />} />
         <Route path="/host/Host_dashboard" element={<Host_dashboard />} />
         <Route path="/explore" element={<Explore />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/profile" element={<AdminProfile />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Home as HomeIcon } from 'lucide-react';
 
 const Logo = () => (
@@ -19,6 +19,13 @@ const Logo = () => (
   </Link>
 );
 
+const navLinkClass = ({ isActive }) =>
+  `px-4 py-2 rounded-full text-[15px] transition-colors ${
+    isActive
+      ? 'bg-[oklch(0.88_0.03_96)] text-foreground font-semibold'
+      : 'text-[oklch(0.52_0.022_118)] hover:bg-[oklch(0.9_0.025_96)] hover:text-foreground'
+  }`;
+
 const Navbar = () => {
   return (
     <header className="fixed top-0 left-0 right-0 bg-[oklch(0.925_0.032_96_/_0.6)] backdrop-blur-sm border-b border-[oklch(0.52_0.022_118_/_0.12)] z-50">
@@ -29,27 +36,18 @@ const Navbar = () => {
           <Logo />
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link
-              to="/explore"
-              className="text-[oklch(0.52_0.022_118)] hover:text-foreground text-[15px] transition-colors"
-            >
+          <nav className="hidden md:flex items-center gap-2">
+            <NavLink to="/explore" className={navLinkClass}>
               Explore
-            </Link>
+            </NavLink>
 
-            <Link
-              to="/Host"
-              className="text-[oklch(0.52_0.022_118)] hover:text-foreground text-[15px] transition-colors"
-            >
+            <NavLink to="/host" className={navLinkClass}>
               Become a Host
-            </Link>
+            </NavLink>
 
-            <Link
-              to="/help"
-              className="text-[oklch(0.52_0.022_118)] hover:text-foreground text-[15px] transition-colors"
-            >
+            <NavLink to="/help" className={navLinkClass}>
               Help
-            </Link>
+            </NavLink>
           </nav>
 
           {/* Authentication */}
