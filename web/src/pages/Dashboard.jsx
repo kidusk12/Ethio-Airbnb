@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   MapPin, LayoutGrid, CalendarDays, History,
-  Settings as SettingsIcon, ChevronDown, ChevronRight, ShieldCheck,
-  CreditCard, LifeBuoy, LogOut, Wallet, Menu, Bell, Star, Users,
-  ChevronsLeft, ChevronsRight, Search, TrendingUp, Clock, CheckCircle2,
-  MessageCircle, Heart,
+  Settings as SettingsIcon, ChevronRight, ShieldCheck,
+  CreditCard, LifeBuoy, LogOut, Wallet, Star, Users,
+  TrendingUp, Clock, CheckCircle2,
+  X, Home,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -13,26 +13,26 @@ import {
   mockPastTrips, mockGuest,
 } from "../data/mockDashboardData";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const A       = "#E8473F";   // accent
-const A_DARK  = "#C73B34";
-const A_LITE  = "#fdf2f2";
-const GRAY    = "#6b7280";
-const STONE   = "#f7f6f4";   // page bg
+// ─── Design tokens (unchanged) ───────────────────────────────────────────────
+const A      = "#E8473F";
+const A_DARK = "#C73B34";
+const A_LITE = "#fdf2f2";
+const GRAY   = "#6b7280";
+const STONE  = "#f7f6f4";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Sidebar tabs ─────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "overview",  label: "Overview",   icon: LayoutGrid    },
-  { id: "bookings",  label: "Bookings",   icon: CalendarDays  },
-  { id: "trips",     label: "Past trips", icon: History       },
-  { id: "settings",  label: "Settings",   icon: SettingsIcon  },
+  { id: "overview",  label: "Overview",   icon: LayoutGrid   },
+  { id: "bookings",  label: "Bookings",   icon: CalendarDays },
+  { id: "trips",     label: "Past trips", icon: History      },
+  { id: "settings",  label: "Settings",   icon: SettingsIcon },
 ];
 
 const STATUS_MAP = {
-  upcoming:  { color: "#2563eb", bg: "#eff6ff", label: "Upcoming"    },
-  active:    { color: A,         bg: A_LITE,    label: "Active now"  },
-  completed: { color: "#6b7280", bg: "#f3f4f6", label: "Completed"   },
-  cancelled: { color: "#dc2626", bg: "#fef2f2", label: "Cancelled"   },
+  upcoming:  { color: "#2563eb", bg: "#eff6ff", label: "Upcoming"   },
+  active:    { color: A,         bg: A_LITE,    label: "Active now" },
+  completed: { color: "#6b7280", bg: "#f3f4f6", label: "Completed"  },
+  cancelled: { color: "#dc2626", bg: "#fef2f2", label: "Cancelled"  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,188 +42,309 @@ const fmtDate = (iso) =>
 const nightsBetween = (a, b) =>
   Math.round((new Date(b) - new Date(a)) / 86_400_000);
 
-// ─── Logo ─────────────────────────────────────────────────────────────────────
-function Logo({ size = "md" }) {
-  const s = size === "sm" ? { icon: 13, text: "text-[16px]", box: "w-7 h-7 rounded-lg" }
-                          : { icon: 16, text: "text-[19px]", box: "w-8 h-8 rounded-xl" };
+// ─── House Logo  (matches ethio-stays-find.lovable.app) ──────────────────────
+function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-      <div className={`${s.box} flex items-center justify-center`} style={{ background: A }}>
-        <MapPin size={s.icon} color="#fff" strokeWidth={2.5} />
+    <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
+      {/* House icon — matches the Lovable reference */}
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
+        style={{ background: A }}
+      >
+        <Home size={18} color="#fff" strokeWidth={2.25} />
       </div>
-      <span className={`${s.text} font-bold tracking-tight text-gray-900 whitespace-nowrap`}>
+      <span className="text-[19px] font-bold tracking-tight text-gray-900 whitespace-nowrap leading-none">
         Ethio<span style={{ color: A }}>Stays</span>
       </span>
     </Link>
   );
 }
 
-// ─── TopBar ───────────────────────────────────────────────────────────────────
-function TopBar({ guestName, unreadCount, onLogout, onMenuClick, onTabChange }) {
-  const [profileOpen, setProfileOpen] = useState(false);
+// ─── Review Modal ─────────────────────────────────────────────────────────────
+function ReviewModal({ trip, onClose, onSubmit }) {
+  const [rating, setRating]     = useState(0);
+  const [hovered, setHovered]   = useState(0);
+  const [text, setText]         = useState("");
+  const overlayRef              = useRef(null);
+
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Trap focus inside modal
+  useEffect(() => {
+    overlayRef.current?.focus();
+  }, []);
+
+  function handleSubmit() {
+    if (!rating) return;
+    onSubmit({ tripId: trip.id, rating, text });
+    onClose();
+  }
+
+  const active = hovered || rating;
 
   return (
-    <header
-      className="sticky top-0 z-40 h-16 bg-white/95 border-b border-gray-100"
-      style={{ backdropFilter: "blur(12px)" }}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}
+      ref={overlayRef}
+      tabIndex={-1}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Write a review"
     >
-      <div className="h-full flex items-center justify-between px-4 lg:px-8 gap-4">
-        {/* Left */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onMenuClick}
-            className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
-          >
-            <Menu size={20} />
-          </button>
-          <Logo />
-        </div>
-
-        {/* Centre search — hidden on small */}
-        <div className="hidden lg:flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 w-72 hover:border-gray-300 transition-colors cursor-pointer">
-          <Search size={14} color={GRAY} />
-          <span className="text-[13px] text-gray-400">Search destinations in Ethiopia…</span>
-        </div>
-
-        {/* Right */}
-        <div className="flex items-center gap-1">
-          {/* Bell */}
-          <button className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-            <Bell size={18} color={GRAY} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2 border-white" style={{ background: A }} />
-            )}
-          </button>
-
-          {/* Profile pill */}
-          <div className="relative ml-1">
-            <button
-              onClick={() => setProfileOpen((v) => !v)}
-              className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full border border-gray-200 hover:shadow-md transition-all bg-white"
-            >
-              <Menu size={16} color={GRAY} />
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                style={{ background: A }}
-              >
-                {guestName?.[0]?.toUpperCase() || "G"}
+      <div
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+        style={{ maxHeight: "90vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div
+          className="px-6 pt-6 pb-5 et-pattern"
+          style={{ background: `linear-gradient(135deg, ${A} 0%, #c0392b 100%)` }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-white/70 text-[12px] font-medium mb-0.5">Share your experience</p>
+              <h3 className="font-display text-[22px] text-white leading-tight">
+                {trip.propertyName}
+              </h3>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <MapPin size={12} color="rgba(255,255,255,0.65)" />
+                <span className="text-white/65 text-[12px]">{trip.location}</span>
               </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center flex-shrink-0 transition-colors mt-0.5"
+              aria-label="Close"
+            >
+              <X size={15} color="#fff" />
             </button>
+          </div>
 
-            {profileOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-2xl py-1.5 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-[13px] font-semibold text-gray-900">{guestName}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Guest · EthioStays</p>
-                  </div>
-                  {[
-                    ["My trips",         "bookings"],
-                    ["Account settings", "settings"],
-                  ].map(([label, tabId]) => (
-                    <button
-                      key={label}
-                      onClick={() => { setProfileOpen(false); onTabChange(tabId); }}
-                      className="w-full text-left block px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <div className="border-t border-gray-100 mt-1 pt-1">
-                    <button
-                      onClick={() => { setProfileOpen(false); onLogout(); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut size={14} />
-                      Sign out
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+          {/* Property thumbnail */}
+          <div className="mt-4 rounded-2xl overflow-hidden h-28 w-full">
+            <img
+              src={trip.image}
+              alt={trip.propertyName}
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
+
+        {/* Modal body */}
+        <div className="px-6 py-5 overflow-y-auto">
+
+          {/* Star rating */}
+          <div className="mb-5">
+            <p className="text-[13px] font-semibold text-gray-700 mb-3">Your rating</p>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onMouseEnter={() => setHovered(n)}
+                  onMouseLeave={() => setHovered(0)}
+                  onClick={() => setRating(n)}
+                  className="transition-transform hover:scale-110 focus:outline-none"
+                  aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
+                >
+                  <Star
+                    size={32}
+                    strokeWidth={1.5}
+                    style={{
+                      fill:   n <= active ? "#f59e0b" : "transparent",
+                      color:  n <= active ? "#f59e0b" : "#d1d5db",
+                      filter: n <= active ? "drop-shadow(0 1px 3px rgba(245,158,11,0.4))" : "none",
+                      transition: "all 0.12s ease",
+                    }}
+                  />
+                </button>
+              ))}
+              {rating > 0 && (
+                <span className="ml-2 text-[13px] font-medium text-gray-500">
+                  {["", "Poor", "Fair", "Good", "Very good", "Excellent"][rating]}
+                </span>
+              )}
+            </div>
+            {!rating && (
+              <p className="text-[11px] text-gray-400 mt-2">Click a star to rate</p>
+            )}
+          </div>
+
+          {/* Text area */}
+          <div className="mb-5">
+            <label className="block text-[13px] font-semibold text-gray-700 mb-2">
+              Your review
+            </label>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Tell others what you loved about this stay — the view, the host, the location…"
+              rows={4}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-[13px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 transition-shadow"
+              style={{ "--tw-ring-color": A + "66" }}
+            />
+            <p className="text-[11px] text-gray-400 mt-1 text-right">{text.length}/500</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!rating}
+              className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-opacity"
+              style={{
+                background: rating ? A : "#d1d5db",
+                cursor: rating ? "pointer" : "not-allowed",
+                opacity: rating ? 1 : 0.7,
+              }}
+            >
+              Submit review
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TopBar ───────────────────────────────────────────────────────────────────
+// Spec: only interactive element is the profile avatar → opens dashboard panel.
+// Remove: search bar, bell, My Trips link, Accounts section.
+function TopBar({ guestName, onAvatarClick }) {
+  return (
+    <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-100">
+      <div className="h-full max-w-[1400px] mx-auto flex items-center justify-between px-5 lg:px-8">
+
+        {/* Left — logo */}
+        <Logo />
+
+        {/* Right — avatar pill (Airbnb-style: hamburger + avatar in a pill) */}
+        <button
+          onClick={onAvatarClick}
+          className="flex items-center gap-2 border border-gray-200 rounded-full pl-3 pr-1 py-1 hover:shadow-md transition-shadow bg-white focus:outline-none"
+          aria-label="Open menu"
+        >
+          {/* Hamburger lines */}
+          <div className="flex flex-col gap-[4px]">
+            <span className="block w-[16px] h-[1.5px] bg-gray-600 rounded-full" />
+            <span className="block w-[16px] h-[1.5px] bg-gray-600 rounded-full" />
+            <span className="block w-[16px] h-[1.5px] bg-gray-600 rounded-full" />
+          </div>
+          {/* Avatar circle */}
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0"
+            style={{ background: A }}
+          >
+            {guestName?.[0]?.toUpperCase() || "G"}
+          </div>
+        </button>
       </div>
     </header>
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-function Sidebar({ activeTab, onSelect, collapsed, onToggle, unreadCount }) {
-  const enriched = TABS.map((t) => ({
-    ...t,
-    badge: t.id === "bookings"
-      ? mockBookings.filter((b) => b.status === "upcoming" || b.status === "active").length
-      : 0,
-  }));
+// ─── Dashboard dropdown (Airbnb-style: appears below avatar, no slide-in) ────
+function DashboardPanel({ guestName, activeTab, onSelect, onLogout, onClose }) {
+  const ref = useRef(null);
+
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const items = [
+    { id: "overview",  label: "Overview"   },
+    { id: "bookings",  label: "Bookings"   },
+    { id: "trips",     label: "Past trips" },
+    { id: "settings",  label: "Settings"   },
+  ];
 
   return (
-    <aside
-      className="hidden md:flex flex-col flex-shrink-0 bg-white border-r border-gray-100 sticky overflow-y-auto"
-      style={{
-        top: "var(--topbar-h, 64px)",
-        width: collapsed ? "var(--sidebar-w-sm, 72px)" : "var(--sidebar-w, 240px)",
-        height: "calc(100vh - 64px)",
-        transition: "width 0.2s ease",
-      }}
-    >
-      <nav className="flex-1 py-4 px-2.5 space-y-0.5">
-        {enriched.map(({ id, label, icon: Icon, badge }) => {
-          const active = activeTab === id;
-          return (
-            <button
-              key={id}
-              title={collapsed ? label : undefined}
-              onClick={() => onSelect(id)}
-              className="relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all group"
-              style={{
-                background: active ? A_LITE : "transparent",
-                color: active ? A : GRAY,
-              }}
-              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
-              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
-            >
-              {/* Active bar */}
-              <span
-                className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full transition-opacity"
-                style={{ background: A, opacity: active ? 1 : 0 }}
-              />
-              <Icon size={17} strokeWidth={active ? 2.25 : 1.875} className="flex-shrink-0" />
-              {!collapsed && <span className="flex-1 text-left truncate">{label}</span>}
-              {!!badge && (
-                <span
-                  className="flex-shrink-0 text-[9px] font-bold rounded-full flex items-center justify-center text-white leading-none"
-                  style={{
-                    background: A,
-                    ...(collapsed
-                      ? { position: "absolute", top: 4, left: 24, width: 15, height: 15 }
-                      : { marginLeft: "auto", minWidth: 17, height: 17, padding: "0 4px" }),
-                  }}
-                >
-                  {badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+    <>
+      {/* Invisible backdrop — click outside closes */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      {/* Collapse toggle */}
-      <div className="p-2.5 border-t border-gray-100">
-        <button
-          onClick={onToggle}
-          title={collapsed ? "Expand" : "Collapse"}
-          className="w-full flex items-center justify-center rounded-xl py-2 text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
-        >
-          {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-        </button>
+      {/* Dropdown card — anchored top-right below the topbar */}
+      <div
+        ref={ref}
+        className="fixed top-[72px] right-4 sm:right-6 lg:right-8 z-50 bg-white rounded-2xl overflow-hidden"
+        style={{
+          width: 280,
+          boxShadow: "0 8px 40px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08)",
+        }}
+        role="dialog"
+        aria-label="Account menu"
+      >
+        {/* ── User identity row ── */}
+        <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-[15px] font-bold text-white flex-shrink-0"
+            style={{ background: A }}
+          >
+            {guestName?.[0]?.toUpperCase() || "G"}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-gray-900 truncate">{guestName}</p>
+            <p className="text-[12px] text-gray-400 truncate">Guest · EthioStays</p>
+          </div>
+        </div>
+
+        {/* ── Menu items — no icons, clean text rows ── */}
+        <div className="py-1">
+          {items.map(({ id, label }, i) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => { onSelect(id); onClose(); }}
+                className="w-full text-left px-4 py-3 text-[14px] transition-colors"
+                style={{
+                  color:      active ? A : "#111827",
+                  fontWeight: active ? 600 : 400,
+                  background: "transparent",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#f7f6f4"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Divider + Log out ── */}
+        <div className="border-t border-gray-100 py-1">
+          <button
+            onClick={onLogout}
+            className="w-full text-left px-4 py-3 text-[14px] transition-colors"
+            style={{ color: "#111827", fontWeight: 400 }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#f7f6f4"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+          >
+            Log out
+          </button>
+        </div>
       </div>
-    </aside>
+    </>
   );
 }
 
-// ─── Hero Banner (Overview only) ──────────────────────────────────────────────
+// ─── Hero Banner ──────────────────────────────────────────────────────────────
 function HeroBanner({ guestName, stats, onStatClick }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -231,42 +352,30 @@ function HeroBanner({ guestName, stats, onStatClick }) {
   return (
     <div
       className="relative rounded-3xl overflow-hidden mb-8 et-pattern"
-      style={{
-        background: `linear-gradient(135deg, ${A} 0%, #c0392b 55%, #922b21 100%)`,
-        minHeight: 200,
-      }}
+      style={{ background: `linear-gradient(135deg, ${A} 0%, #c0392b 55%, #922b21 100%)`, minHeight: 200 }}
     >
-      {/* Decorative circle */}
-      <div
-        className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-10"
-        style={{ background: "#fff" }}
-      />
-      <div
-        className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full opacity-10"
-        style={{ background: "#fff" }}
-      />
+      <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-10" style={{ background: "#fff" }} />
+      <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full opacity-10" style={{ background: "#fff" }} />
 
-      <div className="relative px-6 pt-7 pb-6">
-        {/* Greeting */}
+      <div className="relative px-7 pt-7 pb-7">
         <p className="text-white/70 text-[13px] font-medium mb-1">{greeting}</p>
-        <h1 className="font-display text-[26px] md:text-[30px] text-white font-normal leading-tight mb-1">
+        <h1 className="font-display text-[28px] md:text-[32px] text-white font-normal leading-tight mb-1">
           {guestName}
         </h1>
-        <p className="text-white/60 text-[13px] mb-6">Here's your travel overview</p>
+        <p className="text-white/60 text-[13px] mb-7">Here's your travel overview</p>
 
-        {/* Stat pills */}
         <div className="flex flex-wrap gap-3">
           {stats.map(({ icon: Icon, label, value, tab }) => (
             <button
               key={label}
               onClick={() => onStatClick(tab)}
-              className="flex items-center gap-2.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-2xl px-4 py-2.5 transition-colors text-left"
+              className="flex items-center gap-3 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-2xl px-4 py-3 transition-colors text-left"
             >
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                <Icon size={15} color="#fff" strokeWidth={2} />
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Icon size={16} color="#fff" strokeWidth={2} />
               </div>
               <div>
-                <p className="text-white font-bold text-[18px] leading-none tabular-nums">{value}</p>
+                <p className="text-white font-bold text-[20px] leading-none tabular-nums">{value}</p>
                 <p className="text-white/65 text-[11px] mt-0.5 whitespace-nowrap">{label}</p>
               </div>
             </button>
@@ -285,7 +394,7 @@ function Heading({ title, action }) {
       {action && (
         <button
           onClick={action.fn}
-          className="text-[12px] font-semibold flex items-center gap-0.5 hover:opacity-75 transition-opacity"
+          className="text-[12px] font-semibold flex items-center gap-0.5 transition-opacity hover:opacity-70"
           style={{ color: A }}
         >
           {action.label} <ChevronRight size={13} />
@@ -295,20 +404,20 @@ function Heading({ title, action }) {
   );
 }
 
-// ─── Empty ────────────────────────────────────────────────────────────────────
+// ─── Empty state ──────────────────────────────────────────────────────────────
 function Empty({ icon: Icon, text, cta, onCta }) {
   return (
-    <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-12 flex flex-col items-center gap-3 text-center">
+    <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-14 flex flex-col items-center gap-3 text-center">
       {Icon && (
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: A_LITE }}>
           <Icon size={22} style={{ color: A }} strokeWidth={1.5} />
         </div>
       )}
-      <p className="text-[14px] text-gray-400 max-w-[220px]">{text}</p>
+      <p className="text-[14px] text-gray-400 max-w-[220px] leading-relaxed">{text}</p>
       {cta && (
         <button
           onClick={onCta}
-          className="mt-1 text-[13px] font-semibold px-4 py-2 rounded-full text-white transition-opacity hover:opacity-90"
+          className="mt-1 text-[13px] font-semibold px-5 py-2 rounded-full text-white"
           style={{ background: A }}
         >
           {cta}
@@ -318,97 +427,53 @@ function Empty({ icon: Icon, text, cta, onCta }) {
   );
 }
 
-// ─── BookingCard ─────────────────────────────────────────────────────────────
-function BookingCard({ booking, compact = false }) {
+// ─── Booking Card ─────────────────────────────────────────────────────────────
+function BookingCard({ booking }) {
   const { propertyName, propertyType, location, image, checkIn, checkOut, guests, totalPriceETB, status, hostName } = booking;
   const s = STATUS_MAP[status] ?? STATUS_MAP.upcoming;
   const n = nightsBetween(checkIn, checkOut);
 
-  if (compact) {
-    return (
-      <div className="flex items-center gap-4 py-4 border-b border-gray-100 last:border-b-0">
-        <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-gray-100">
-          <img src={image} alt={propertyName} className="w-full h-full object-cover" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <p className="text-[13px] font-semibold text-gray-900 truncate">{propertyName}</p>
-            <span
-              className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: s.bg, color: s.color }}
-            >
-              {s.label}
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-gray-400 mb-0.5">
-            <MapPin size={11} />
-            <span className="text-[12px] truncate">{location}</span>
-          </div>
-          <p className="text-[11px] text-gray-400">
-            {fmtDate(checkIn)} — {fmtDate(checkOut)} · {n} night{n !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <p className="text-[14px] font-bold text-gray-900 flex-shrink-0 tabular-nums">
-          ETB {totalPriceETB.toLocaleString()}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col sm:flex-row group hover:shadow-md transition-shadow">
-      {/* Image */}
       <div className="sm:w-56 flex-shrink-0 relative overflow-hidden">
         <img
           src={image}
           alt={propertyName}
           className="w-full h-52 sm:h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        {/* Status badge on image */}
         <span
-          className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm"
-          style={{ background: s.bg + "e0", color: s.color }}
+          className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: s.bg + "e8", color: s.color }}
         >
           {s.label}
         </span>
       </div>
 
-      {/* Body */}
-      <div className="flex-1 p-5 md:p-6 flex flex-col justify-between">
+      <div className="flex-1 p-5 md:p-6 flex flex-col justify-between gap-4">
         <div>
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <p
-                className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                style={{ color: A }}
-              >
-                {propertyType}
-              </p>
-              <h3 className="text-[17px] font-semibold text-gray-900 leading-snug">{propertyName}</h3>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-gray-400 mb-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: A }}>
+            {propertyType}
+          </p>
+          <h3 className="text-[17px] font-semibold text-gray-900 leading-snug mb-2">{propertyName}</h3>
+          <div className="flex items-center gap-1.5 text-gray-400">
             <MapPin size={13} />
             <span className="text-[13px]">{location}</span>
           </div>
-
-          {/* Details row */}
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <CalendarDays size={13} color="#9ca3af" />
-              {fmtDate(checkIn)} — {fmtDate(checkOut)}
-              <span className="text-gray-400 font-medium">· {n} night{n !== 1 ? "s" : ""}</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Users size={13} color="#9ca3af" />
-              {guests} guest{guests !== 1 ? "s" : ""}
-            </span>
-          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-gray-500">
+          <span className="flex items-center gap-1.5">
+            <CalendarDays size={13} color="#9ca3af" />
+            {fmtDate(checkIn)} — {fmtDate(checkOut)}
+            <span className="font-medium text-gray-400"> · {n} night{n !== 1 ? "s" : ""}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Users size={13} color="#9ca3af" />
+            {guests} guest{guests !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center gap-2.5">
             <div
               className="w-7 h-7 rounded-full text-white flex items-center justify-center text-[11px] font-bold flex-shrink-0"
@@ -417,7 +482,7 @@ function BookingCard({ booking, compact = false }) {
               {hostName?.[0]?.toUpperCase()}
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 leading-none">Hosted by</p>
+              <p className="text-[10px] text-gray-400 leading-none">Hosted by</p>
               <p className="text-[12px] font-semibold text-gray-700">{hostName}</p>
             </div>
           </div>
@@ -431,123 +496,41 @@ function BookingCard({ booking, compact = false }) {
   );
 }
 
-// ─── MessageItem ──────────────────────────────────────────────────────────────
-function MessageItem({ msg }) {
-  const { hostName, hostAvatar, propertyName, preview, timestamp, unread } = msg;
-  return (
-    <div
-      className="flex items-start gap-3.5 px-5 py-3.5 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50 last:border-b-0"
-      style={{ background: unread ? "#fff9f9" : "transparent" }}
-    >
-      <div className="relative flex-shrink-0">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-          {hostAvatar
-            ? <img src={hostAvatar} alt={hostName} className="w-full h-full object-cover" />
-            : <span className="w-full h-full flex items-center justify-center text-[13px] font-semibold text-gray-600">{hostName?.[0]?.toUpperCase()}</span>
-          }
-        </div>
-        {unread && (
-          <span
-            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white"
-            style={{ background: A }}
-          />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 mb-0.5">
-          <p className={`text-[13px] truncate ${unread ? "font-semibold text-gray-900" : "font-medium text-gray-700"}`}>
-            {hostName}
-          </p>
-          <span className="text-[11px] text-gray-400 flex-shrink-0">{timestamp}</span>
-        </div>
-        <p className="text-[11px] font-medium truncate mb-0.5" style={{ color: A }}>{propertyName}</p>
-        <p className={`text-[12px] truncate ${unread ? "text-gray-600" : "text-gray-400"}`}>{preview}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── SavedStayCard ────────────────────────────────────────────────────────────
-function SavedStayCard({ stay }) {
-  const { name, type, location, image, rating, reviews, pricePerNightETB } = stay;
-  return (
-    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-      {/* Image */}
-      <div className="relative w-full h-48 overflow-hidden">
-        <img
-          src={image}
-          alt={name}
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        <button
-          aria-label="Unsave"
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-sm transition-colors"
-        >
-          <Heart size={14} style={{ fill: A, color: A }} />
-        </button>
-        <span className="absolute bottom-3 left-3 bg-black/40 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-          {type}
-        </span>
-      </div>
-
-      {/* Info */}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <h4 className="text-[14px] font-semibold text-gray-900 truncate">{name}</h4>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Star size={11} style={{ fill: "#f59e0b", color: "#f59e0b" }} />
-            <span className="text-[12px] font-semibold text-gray-700">{rating}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 mb-3">
-          <MapPin size={11} color="#9ca3af" />
-          <span className="text-[12px] text-gray-400 truncate">{location}</span>
-        </div>
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <p className="text-[14px] font-bold text-gray-900 tabular-nums">
-            ETB {pricePerNightETB.toLocaleString()}
-            <span className="text-[12px] font-normal text-gray-400"> / night</span>
-          </p>
-          <button
-            className="text-[12px] font-semibold px-3 py-1 rounded-full transition-colors"
-            style={{ background: A_LITE, color: A }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = A; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = A_LITE; e.currentTarget.style.color = A; }}
-          >
-            Book again
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── PastTripCard ─────────────────────────────────────────────────────────────
+// ─── Past Trip Card (with review CTA) ────────────────────────────────────────
 function PastTripCard({ trip, onReview }) {
   const { id, propertyName, location, image, stayedDates, reviewed, myRating } = trip;
+
   return (
     <div className="flex items-center gap-4 py-4 border-b border-gray-100 last:border-b-0">
-      <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-gray-100">
+      <div className="flex-shrink-0 w-16 h-16 rounded-2xl overflow-hidden bg-gray-100">
         <img src={image} alt={propertyName} className="w-full h-full object-cover" />
       </div>
+
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-semibold text-gray-900 truncate mb-0.5">{propertyName}</p>
         <div className="flex items-center gap-1 text-gray-400 mb-0.5">
-          <MapPin size={11} /><span className="text-[12px] truncate">{location}</span>
+          <MapPin size={11} />
+          <span className="text-[12px] truncate">{location}</span>
         </div>
         <div className="flex items-center gap-1 text-gray-400">
-          <Clock size={11} /><span className="text-[12px]">{stayedDates}</span>
+          <Clock size={11} />
+          <span className="text-[12px]">{stayedDates}</span>
         </div>
       </div>
+
       <div className="flex-shrink-0 text-right">
         {reviewed ? (
           <div>
             <div className="flex items-center gap-0.5 justify-end mb-1">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} size={11} style={{
-                  fill: i < (myRating ?? 0) ? "#f59e0b" : "#e5e7eb",
-                  color: i < (myRating ?? 0) ? "#f59e0b" : "#e5e7eb",
-                }} />
+                <Star
+                  key={i}
+                  size={12}
+                  style={{
+                    fill:  i < (myRating ?? 0) ? "#f59e0b" : "#e5e7eb",
+                    color: i < (myRating ?? 0) ? "#f59e0b" : "#e5e7eb",
+                  }}
+                />
               ))}
             </div>
             <div className="flex items-center gap-1 justify-end">
@@ -557,11 +540,11 @@ function PastTripCard({ trip, onReview }) {
           </div>
         ) : (
           <button
-            onClick={() => onReview?.(id)}
-            className="text-[12px] font-semibold px-3 py-1.5 rounded-full text-white transition-opacity hover:opacity-85"
+            onClick={() => onReview(trip)}
+            className="text-[12px] font-semibold px-3.5 py-1.5 rounded-full text-white transition-opacity hover:opacity-85 whitespace-nowrap"
             style={{ background: A }}
           >
-            Leave a review
+            Write a review
           </button>
         )}
       </div>
@@ -569,33 +552,30 @@ function PastTripCard({ trip, onReview }) {
   );
 }
 
-// ─── Overview tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ onNav }) {
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
+function OverviewTab({ onNav, onOpenReview }) {
   const upcoming = mockBookings.filter((b) => b.status === "upcoming" || b.status === "active");
 
   return (
     <div className="space-y-10">
-
-      {/* Active / upcoming trips */}
       <section>
         <Heading title="Your trips" action={{ label: "All bookings", fn: () => onNav("bookings") }} />
         {upcoming.length
           ? <div className="space-y-5">{upcoming.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
-          : <Empty icon={CalendarDays} text="No upcoming trips yet." cta="Explore stays" onCta={() => {}} />
+          : <Empty icon={CalendarDays} text="No upcoming trips yet." cta="Explore stays" />
         }
       </section>
 
-      {/* Past trips */}
       <section>
         <Heading title="Past trips" action={{ label: "View history", fn: () => onNav("trips") }} />
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 divide-y divide-gray-100">
           {mockPastTrips.map((t) => (
-            <PastTripCard key={t.id} trip={t} onReview={() => onNav("trips")} />
+            <PastTripCard key={t.id} trip={t} onReview={onOpenReview} />
           ))}
         </div>
       </section>
 
-      {/* Ethiopian travel tip strip */}
+      {/* Ethiopian promo strip */}
       <div
         className="rounded-2xl p-5 flex items-center gap-4 et-pattern"
         style={{ background: `linear-gradient(120deg, ${A} 0%, #c0392b 100%)` }}
@@ -621,7 +601,7 @@ function OverviewTab({ onNav }) {
   );
 }
 
-// ─── Bookings tab ─────────────────────────────────────────────────────────────
+// ─── Bookings Tab ─────────────────────────────────────────────────────────────
 function BookingsTab() {
   const groups = [
     { label: "Upcoming & active", items: mockBookings.filter((b) => b.status === "upcoming" || b.status === "active") },
@@ -631,29 +611,29 @@ function BookingsTab() {
 
   return (
     <div className="space-y-8">
-      {groups.map((g) => (
-        <section key={g.label}>
-          <Heading title={g.label} />
-          <div className="space-y-5">
-            {g.items.map((b) => <BookingCard key={b.id} booking={b} />)}
-          </div>
-        </section>
-      ))}
-      {groups.length === 0 && (
-        <Empty icon={CalendarDays} text="No bookings yet. Start exploring Ethiopian stays." cta="Explore stays" />
-      )}
+      {groups.length
+        ? groups.map((g) => (
+            <section key={g.label}>
+              <Heading title={g.label} />
+              <div className="space-y-5">{g.items.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+            </section>
+          ))
+        : <Empty icon={CalendarDays} text="No bookings yet. Start exploring Ethiopian stays." cta="Explore stays" />
+      }
     </div>
   );
 }
 
-// ─── Trips tab ────────────────────────────────────────────────────────────────
-function TripsTab() {
+// ─── Trips Tab ────────────────────────────────────────────────────────────────
+function TripsTab({ onOpenReview }) {
   return (
     <div className="max-w-2xl">
       <Heading title="Past trips" />
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 divide-y divide-gray-100">
         {mockPastTrips.length
-          ? mockPastTrips.map((t) => <PastTripCard key={t.id} trip={t} />)
+          ? mockPastTrips.map((t) => (
+              <PastTripCard key={t.id} trip={t} onReview={onOpenReview} />
+            ))
           : <Empty icon={History} text="No past trips yet." />
         }
       </div>
@@ -661,7 +641,7 @@ function TripsTab() {
   );
 }
 
-// ─── Settings tab ─────────────────────────────────────────────────────────────
+// ─── Settings Tab ─────────────────────────────────────────────────────────────
 function SettingsTab({ guestName }) {
   const items = [
     { icon: ShieldCheck, title: "Account & security",  desc: "Password, two-factor auth, login history"  },
@@ -686,12 +666,11 @@ function SettingsTab({ guestName }) {
           {guestName?.[0]?.toUpperCase()}
         </div>
         <div>
-          <p className="font-display text-[20px] text-white">{guestName}</p>
+          <p className="font-display text-[20px] text-white leading-tight">{guestName}</p>
           <p className="text-white/70 text-[12px] mt-0.5">Guest · EthioStays member</p>
         </div>
       </div>
 
-      {/* Settings list */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
         {items.map(({ icon: Icon, title, desc }) => (
           <button
@@ -699,16 +678,14 @@ function SettingsTab({ guestName }) {
             className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors group"
           >
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: A_LITE }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#fce8e7"}
-              onMouseLeave={(e) => e.currentTarget.style.background = A_LITE}
             >
               <Icon size={17} style={{ color: A }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-semibold text-gray-900">{title}</p>
-              <p className="text-[12px] text-gray-400">{desc}</p>
+              <p className="text-[12px] text-gray-400 mt-0.5">{desc}</p>
             </div>
             <ChevronRight size={15} color="#d1d5db" />
           </button>
@@ -720,16 +697,30 @@ function SettingsTab({ guestName }) {
 
 // ─── Dashboard root ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { user, logout }            = useAuth();
-  const navigate                    = useNavigate();
-  const [tab, setTab]               = useState("overview");
-  const [collapsed, setCollapsed]   = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout }              = useAuth();
+  const navigate                      = useNavigate();
+  const [tab, setTab]                 = useState("overview");
+  const [panelOpen, setPanelOpen]     = useState(false);  // profile dashboard panel
+  const [reviewTrip, setReviewTrip]   = useState(null);   // trip being reviewed
+  const [reviews, setReviews]         = useState({});     // { tripId: { rating, text } }
 
-  const guestName   = user?.name ?? mockGuest.name;
-  const unreadCount = 0; // messages tab removed
+  const guestName = user?.name ?? mockGuest.name;
 
   function handleLogout() { logout(); navigate("/"); }
+
+  function handleSubmitReview({ tripId, rating, text }) {
+    setReviews((prev) => ({ ...prev, [tripId]: { rating, text } }));
+  }
+
+  // Merge review state into trips
+  const enrichedTrips = useMemo(() =>
+    mockPastTrips.map((t) =>
+      reviews[t.id]
+        ? { ...t, reviewed: true, myRating: reviews[t.id].rating }
+        : t
+    ),
+    [reviews]
+  );
 
   const stats = useMemo(() => [
     {
@@ -748,80 +739,58 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen" style={{ background: STONE }}>
+
+      {/* ── Top bar ── */}
       <TopBar
         guestName={guestName}
-        unreadCount={unreadCount}
-        onLogout={handleLogout}
-        onMenuClick={() => setMobileOpen(true)}
-        onTabChange={(id) => { setTab(id); setMobileOpen(false); }}
+        onAvatarClick={() => setPanelOpen(true)}
       />
 
-      <div className="flex">
-        <Sidebar
+      {/* ── Dashboard slide-in panel ── */}
+      {panelOpen && (
+        <DashboardPanel
+          guestName={guestName}
           activeTab={tab}
-          onSelect={(id) => { setTab(id); setMobileOpen(false); }}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((v) => !v)}
-          unreadCount={unreadCount}
+          onSelect={(id) => { setTab(id); }}
+          onLogout={() => { setPanelOpen(false); handleLogout(); }}
+          onClose={() => setPanelOpen(false)}
         />
+      )}
 
-        {/* Mobile slide-over */}
-        {mobileOpen && (
-          <div className="md:hidden fixed inset-0 z-50 flex">
-            <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-            <div className="relative w-72 bg-white h-full shadow-2xl flex flex-col">
-              <div className="h-16 flex items-center px-5 border-b border-gray-100">
-                <Logo />
-              </div>
-              <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-                {TABS.map(({ id, label, icon: Icon }) => {
-                  const active = tab === id;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => { setTab(id); setMobileOpen(false); }}
-                      className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-[14px] font-medium transition-colors"
-                      style={{
-                        background: active ? A_LITE : "transparent",
-                        color: active ? A : GRAY,
-                      }}
-                    >
-                      <Icon size={18} strokeWidth={active ? 2.25 : 1.875} />
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-              {/* User strip */}
-              <div className="p-4 border-t border-gray-100 flex items-center gap-3">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0"
-                  style={{ background: A }}
-                >
-                  {guestName?.[0]?.toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-900 truncate">{guestName}</p>
-                  <p className="text-[11px] text-gray-400">Guest account</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* ── Review modal ── */}
+      {reviewTrip && (
+        <ReviewModal
+          trip={reviewTrip}
+          onClose={() => setReviewTrip(null)}
+          onSubmit={handleSubmitReview}
+        />
+      )}
 
-        {/* Main */}
-        <main className="flex-1 min-w-0 px-4 md:px-8 lg:px-10 pt-7 pb-24">
+      <div className="flex">
+
+        {/* ── Main content ── */}
+        <main className="flex-1 min-w-0 px-5 md:px-8 lg:px-10 pt-7 pb-24">
 
           {tab === "overview" && (
             <>
               <HeroBanner guestName={guestName} stats={stats} onStatClick={setTab} />
-              <OverviewTab onNav={setTab} />
+              <OverviewTab
+                onNav={setTab}
+                onOpenReview={(trip) => setReviewTrip(trip)}
+              />
             </>
           )}
 
-          {tab === "bookings"  && <BookingsTab />}
-          {tab === "trips"     && <TripsTab />}
-          {tab === "settings"  && <SettingsTab guestName={guestName} />}
+          {tab === "bookings" && <BookingsTab />}
+
+          {tab === "trips" && (
+            <TripsTab
+              onOpenReview={(trip) => setReviewTrip(trip)}
+            />
+          )}
+
+          {tab === "settings" && <SettingsTab guestName={guestName} />}
+
         </main>
       </div>
     </div>
