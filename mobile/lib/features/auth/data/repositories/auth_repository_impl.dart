@@ -11,23 +11,32 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Result<User>> register({
-    required String name,
+    required String firstName,
+    String? middleName,
+    required String lastName,
+    required String phoneNumber,
     required String email,
     required String password,
     required String role,
   }) async {
     try {
       final user = await _remoteDataSource.register(
-        name: name,
+        firstName: firstName,
+        middleName: middleName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
         email: email,
         password: password,
         role: role,
       );
+
       return Success(user);
     } on ApiException catch (e) {
       return Failure(e.message);
     } catch (_) {
-      return const Failure('Could not connect. Check your internet connection.');
+      return const Failure(
+        'Could not connect. Check your internet connection.',
+      );
     }
   }
 
@@ -37,12 +46,18 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      final user = await _remoteDataSource.login(email: email, password: password);
+      final user = await _remoteDataSource.login(
+        email: email,
+        password: password,
+      );
+
       return Success(user);
     } on ApiException catch (e) {
       return Failure(e.message);
     } catch (_) {
-      return const Failure('Could not connect. Check your internet connection.');
+      return const Failure(
+        'Could not connect. Check your internet connection.',
+      );
     }
   }
 
@@ -54,7 +69,9 @@ class AuthRepositoryImpl implements AuthRepository {
     } on ApiException catch (e) {
       return Failure(e.message);
     } catch (_) {
-      return const Failure('Could not connect. Check your internet connection.');
+      return const Failure(
+        'Could not connect. Check your internet connection.',
+      );
     }
   }
 }

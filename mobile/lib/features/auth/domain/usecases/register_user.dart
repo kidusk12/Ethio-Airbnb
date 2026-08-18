@@ -8,13 +8,19 @@ class RegisterUser {
   RegisterUser(this.repository);
 
   Future<Result<User>> call({
-    required String name,
+    required String firstName,
+    String? middleName,
+    required String lastName,
+    required String phoneNumber,
     required String email,
     required String password,
     required String role,
   }) {
     return repository.register(
-      name: name,
+      firstName: firstName,
+      middleName: middleName,
+      lastName: lastName,
+      phoneNumber: phoneNumber,
       email: email,
       password: password,
       role: role,

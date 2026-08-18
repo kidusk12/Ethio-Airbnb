@@ -14,7 +14,11 @@ import '../widgets/auth_hero_header.dart';
 /// Presentation layer only: collects input, validates it, and delegates to
 /// [AuthController.login]. No business logic or networking lives here.
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  /// If present, login redirects here instead of the role-based default
+  /// (e.g. the listing the user was trying to book while logged out).
+  final String? returnTo;
+
+  const LoginPage({super.key, this.returnTo});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -47,7 +51,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (next is AuthSuccess) {
-        context.go('/home');
+        if (widget.returnTo != null) {
+          context.go(widget.returnTo!);
+        } else if (next.user.role == 'host') {
+          context.go('/host/home');
+        } else {
+          context.go('/home');
+        }
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.message)),
@@ -152,7 +162,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                       Center(
                         child: GestureDetector(
-                          onTap: () => context.go('/register'),
+                          onTap: () => context.go(
+                            widget.returnTo == null
+                                ? '/register'
+                                : '/register?returnTo=${Uri.encodeComponent(widget.returnTo!)}',
+                          ),
                           child: RichText(
                             text: TextSpan(
                               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textPrimary),

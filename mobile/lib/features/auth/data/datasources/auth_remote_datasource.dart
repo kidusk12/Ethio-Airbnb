@@ -14,18 +14,31 @@ class AuthRemoteDataSource {
         _tokenStorage = tokenStorage;
 
   Future<UserModel> register({
-    required String name,
+    required String firstName,
+    String? middleName,
+    required String lastName,
+    required String phoneNumber,
     required String email,
     required String password,
     required String role,
   }) async {
     final response = await _apiClient.post(
       ApiEndpoints.register,
-      body: {'name': name, 'email': email, 'password': password, 'role': role},
+      body: {
+        'firstName': firstName,
+        'middleName': middleName,
+        'lastName': lastName,
+        'phoneNumber': phoneNumber,
+        'email': email,
+        'password': password,
+        'role': role,
+      },
     );
 
     final data = response['data'] as Map<String, dynamic>;
-    await _tokenStorage.saveToken(data['token'] as String);
+
+    // Registration does not authenticate the user.
+    // Backend response: { "data": { "user": { ... } } }
     return UserModel.fromJson(data['user'] as Map<String, dynamic>);
   }
 
@@ -35,16 +48,24 @@ class AuthRemoteDataSource {
   }) async {
     final response = await _apiClient.post(
       ApiEndpoints.login,
-      body: {'email': email, 'password': password},
+      body: {
+        'email': email,
+        'password': password,
+      },
     );
 
     final data = response['data'] as Map<String, dynamic>;
     await _tokenStorage.saveToken(data['token'] as String);
+
     return UserModel.fromJson(data['user'] as Map<String, dynamic>);
   }
 
   Future<UserModel> getCurrentUser() async {
-    final response = await _apiClient.get(ApiEndpoints.me, authenticated: true);
+    final response = await _apiClient.get(
+      ApiEndpoints.me,
+      authenticated: true,
+    );
+
     return UserModel.fromJson(response['data'] as Map<String, dynamic>);
   }
 }

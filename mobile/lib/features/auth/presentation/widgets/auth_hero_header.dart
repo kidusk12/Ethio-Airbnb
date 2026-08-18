@@ -17,7 +17,7 @@ class AuthHeroHeader extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/hero_stay.png',
+            'assets/images/hero_stay.jpg',
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) =>
                 Container(color: AppColors.textPrimary),
@@ -42,7 +42,7 @@ class AuthHeroHeader extends StatelessWidget {
                   text: TextSpan(
                     style: AppTextStyles.heroTitle,
                     children: const [
-                      TextSpan(text: 'Sheba'),
+                      TextSpan(text: 'Ethio'),
                       TextSpan(
                         text: 'Stays',
                         style: TextStyle(color: AppColors.primary),
