@@ -1,3 +1,4 @@
+```javascriptreact
 import React from "react";
 import { Star, Heart } from "lucide-react";
 
@@ -47,4 +48,5 @@ export function SavedStayCard({ stay, onRemove }) {
       </div>
     </div>
   );
-}
+} here 
+```
