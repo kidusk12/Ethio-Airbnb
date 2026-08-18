@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  MapPin, LayoutGrid, CalendarDays, MessageCircle, Heart, History,
+  MapPin, LayoutGrid, CalendarDays, History,
   Settings as SettingsIcon, ChevronDown, ChevronRight, ShieldCheck,
   CreditCard, LifeBuoy, LogOut, Wallet, Menu, Bell, Star, Users,
   ChevronsLeft, ChevronsRight, Search, TrendingUp, Clock, CheckCircle2,
+  MessageCircle, Heart,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -23,8 +24,6 @@ const STONE   = "#f7f6f4";   // page bg
 const TABS = [
   { id: "overview",  label: "Overview",   icon: LayoutGrid    },
   { id: "bookings",  label: "Bookings",   icon: CalendarDays  },
-  { id: "messages",  label: "Messages",   icon: MessageCircle },
-  { id: "saved",     label: "Saved",      icon: Heart         },
   { id: "trips",     label: "Past trips", icon: History       },
   { id: "settings",  label: "Settings",   icon: SettingsIcon  },
 ];
@@ -121,8 +120,6 @@ function TopBar({ guestName, unreadCount, onLogout, onMenuClick, onTabChange }) 
                   </div>
                   {[
                     ["My trips",         "bookings"],
-                    ["Messages",         "messages"],
-                    ["Saved stays",      "saved"   ],
                     ["Account settings", "settings"],
                   ].map(([label, tabId]) => (
                     <button
@@ -156,9 +153,9 @@ function TopBar({ guestName, unreadCount, onLogout, onMenuClick, onTabChange }) 
 function Sidebar({ activeTab, onSelect, collapsed, onToggle, unreadCount }) {
   const enriched = TABS.map((t) => ({
     ...t,
-    badge: t.id === "messages" ? unreadCount
-         : t.id === "bookings" ? mockBookings.filter((b) => b.status === "upcoming" || b.status === "active").length
-         : 0,
+    badge: t.id === "bookings"
+      ? mockBookings.filter((b) => b.status === "upcoming" || b.status === "active").length
+      : 0,
   }));
 
   return (
@@ -574,7 +571,6 @@ function PastTripCard({ trip, onReview }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 function OverviewTab({ onNav }) {
-  const unread = mockMessages.filter((m) => m.unread).length;
   const upcoming = mockBookings.filter((b) => b.status === "upcoming" || b.status === "active");
 
   return (
@@ -588,74 +584,6 @@ function OverviewTab({ onNav }) {
           : <Empty icon={CalendarDays} text="No upcoming trips yet." cta="Explore stays" onCta={() => {}} />
         }
       </section>
-
-      {/* Two-column: messages + saved */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Messages */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-semibold text-gray-900">Messages</h3>
-              {unread > 0 && (
-                <span
-                  className="text-[10px] font-bold rounded-full min-w-[17px] h-[17px] px-1 text-white flex items-center justify-center"
-                  style={{ background: A }}
-                >
-                  {unread}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => onNav("messages")}
-              className="text-[12px] font-semibold flex items-center gap-0.5"
-              style={{ color: A }}
-            >
-              See all <ChevronRight size={13} />
-            </button>
-          </div>
-          <div className="flex-1">
-            {mockMessages.slice(0, 3).map((m) => <MessageItem key={m.id} msg={m} />)}
-          </div>
-        </section>
-
-        {/* Saved stays */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-gray-100">
-            <h3 className="text-[15px] font-semibold text-gray-900">Saved stays</h3>
-            <button
-              onClick={() => onNav("saved")}
-              className="text-[12px] font-semibold flex items-center gap-0.5"
-              style={{ color: A }}
-            >
-              View all <ChevronRight size={13} />
-            </button>
-          </div>
-          <div className="flex-1 divide-y divide-gray-50">
-            {mockSavedStays.slice(0, 3).map((s) => (
-              <div key={s.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
-                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-900 truncate">{s.name}</p>
-                  <div className="flex items-center gap-1">
-                    <MapPin size={10} color="#9ca3af" />
-                    <span className="text-[11px] text-gray-400 truncate">{s.location}</span>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[13px] font-bold text-gray-900 tabular-nums">ETB {s.pricePerNightETB.toLocaleString()}</p>
-                  <div className="flex items-center gap-0.5 justify-end">
-                    <Star size={10} style={{ fill: "#f59e0b", color: "#f59e0b" }} />
-                    <span className="text-[11px] text-gray-500">{s.rating}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
 
       {/* Past trips */}
       <section>
@@ -713,36 +641,6 @@ function BookingsTab() {
       ))}
       {groups.length === 0 && (
         <Empty icon={CalendarDays} text="No bookings yet. Start exploring Ethiopian stays." cta="Explore stays" />
-      )}
-    </div>
-  );
-}
-
-// ─── Messages tab ─────────────────────────────────────────────────────────────
-function MessagesTab() {
-  return (
-    <div className="max-w-2xl">
-      <Heading title="Messages" />
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {mockMessages.length
-          ? mockMessages.map((m) => <MessageItem key={m.id} msg={m} />)
-          : <Empty icon={MessageCircle} text="No messages yet." />
-        }
-      </div>
-    </div>
-  );
-}
-
-// ─── Saved tab ────────────────────────────────────────────────────────────────
-function SavedTab() {
-  return (
-    <div>
-      <Heading title={`Saved stays (${mockSavedStays.length})`} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-        {mockSavedStays.map((s) => <SavedStayCard key={s.id} stay={s} />)}
-      </div>
-      {mockSavedStays.length === 0 && (
-        <Empty icon={Heart} text="You haven't saved any stays yet." cta="Start exploring" />
       )}
     </div>
   );
@@ -829,7 +727,7 @@ export default function Dashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const guestName   = user?.name ?? mockGuest.name;
-  const unreadCount = mockMessages.filter((m) => m.unread).length;
+  const unreadCount = 0; // messages tab removed
 
   function handleLogout() { logout(); navigate("/"); }
 
@@ -840,15 +738,13 @@ export default function Dashboard() {
       value: mockBookings.filter((b) => b.status === "upcoming" || b.status === "active").length,
       tab: "bookings",
     },
-    { icon: Heart,         label: "Saved stays",     value: mockSavedStays.length,  tab: "saved"    },
-    { icon: MessageCircle, label: "Unread",          value: unreadCount,            tab: "messages" },
     {
       icon: Wallet,
       label: "Spent this year",
       value: `${(mockGuest.totalSpentETB / 1000).toFixed(0)}K ETB`,
       tab: "bookings",
     },
-  ], [unreadCount]);
+  ], []);
 
   return (
     <div className="min-h-screen" style={{ background: STONE }}>
@@ -924,8 +820,6 @@ export default function Dashboard() {
           )}
 
           {tab === "bookings"  && <BookingsTab />}
-          {tab === "messages"  && <MessagesTab />}
-          {tab === "saved"     && <SavedTab />}
           {tab === "trips"     && <TripsTab />}
           {tab === "settings"  && <SettingsTab guestName={guestName} />}
         </main>
