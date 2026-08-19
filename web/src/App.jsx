@@ -7,7 +7,7 @@ import Host from "./pages/Host";
 import List from "./pages/List";
 import Host_dashboard from "./pages/Host_dashboard";
 import Explore from "./pages/Explore";
-import About from "./pages/About";
+
 import PropertyDetail from "./pages/PropertyDetail";
 import Book from "./pages/Book";
 import AdminDashboard from "./pages/AdminDashboard";
