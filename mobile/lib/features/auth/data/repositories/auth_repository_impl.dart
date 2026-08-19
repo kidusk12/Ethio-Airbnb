@@ -74,4 +74,44 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     }
   }
+
+  @override
+  Future<Result<User>> updateProfile({
+    required String name,
+    required String email,
+  }) async {
+    try {
+      final user = await _remoteDataSource.updateProfile(
+        name: name,
+        email: email,
+      );
+      return Success(user);
+    } on ApiException catch (e) {
+      return Failure(e.message);
+    } catch (_) {
+      return const Failure(
+        'Could not connect. Check your internet connection.',
+      );
+    }
+  }
+
+  @override
+  Future<Result<bool>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _remoteDataSource.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      return const Success(true);
+    } on ApiException catch (e) {
+      return Failure(e.message);
+    } catch (_) {
+      return const Failure(
+        'Could not connect. Check your internet connection.',
+      );
+    }
+  }
 }

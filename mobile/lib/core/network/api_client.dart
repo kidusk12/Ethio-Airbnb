@@ -70,6 +70,19 @@ class ApiClient {
     return _handleResponse(response);
   }
 
+  Future<Map<String, dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? body,
+    bool authenticated = false,
+  }) async {
+    final response = await _client.patch(
+      _uri(path),
+      headers: await _headers(authenticated: authenticated),
+      body: jsonEncode(body ?? {}),
+    );
+    return _handleResponse(response);
+  }
+
   Future<Map<String, dynamic>> delete(
     String path, {
     bool authenticated = false,

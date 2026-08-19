@@ -1,5 +1,3 @@
-/// Shared validators for `TextFormField.validator`. Add new ones here
-/// instead of writing inline validation logic inside a page (guide §5.6).
 class Validators {
   Validators._();
 
@@ -7,6 +5,20 @@ class Validators {
     if (value == null || value.trim().isEmpty) {
       return '$field is required';
     }
+    return null;
+  }
+
+  static String? email(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Enter your email address';
+    }
+
+    final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+    if (!emailPattern.hasMatch(value.trim())) {
+      return 'Enter a valid email address';
+    }
+
     return null;
   }
 
@@ -21,10 +33,36 @@ class Validators {
     return null;
   }
 
+  static String? phoneNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Enter your phone number';
+    }
+
+    final phonePattern = RegExp(r'^\+?[0-9]{9,15}$');
+
+    if (!phonePattern.hasMatch(value.trim())) {
+      return 'Enter a valid phone number';
+    }
+
+    return null;
+  }
+
   static String? password(String? value, {int minLength = 8}) {
     if (value == null || value.length < minLength) {
       return 'Password must be at least $minLength characters';
     }
+    return null;
+  }
+
+  static String? confirmPassword(String? value, String password) {
+    if (value == null || value.isEmpty) {
+      return 'Confirm your password';
+    }
+
+    if (value != password) {
+      return 'Passwords do not match';
+    }
+
     return null;
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../../core/utils/result.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/user.dart';
@@ -79,16 +80,19 @@ class AuthController extends StateNotifier<AuthState> {
   final RegisterUser _registerUser;
   final LoginUser _loginUser;
   final GetCurrentUser _getCurrentUser;
+  final AuthRepository _authRepository;
   final TokenStorage _tokenStorage;
 
   AuthController({
     required RegisterUser registerUser,
     required LoginUser loginUser,
     required GetCurrentUser getCurrentUser,
+    required AuthRepository authRepository,
     required TokenStorage tokenStorage,
   })  : _registerUser = registerUser,
         _loginUser = loginUser,
         _getCurrentUser = getCurrentUser,
+        _authRepository = authRepository,
         _tokenStorage = tokenStorage,
         super(const AuthInitial()) {
     _restoreSession();
@@ -154,6 +158,28 @@ class AuthController extends StateNotifier<AuthState> {
     );
   }
 
+  Future<Result<User>> updateProfile({
+    required String name,
+    required String email,
+  }) async {
+    final result = await _authRepository.updateProfile(name: name, email: email);
+    result.fold(
+      (_) {},
+      (user) => state = AuthSuccess(user),
+    );
+    return result;
+  }
+
+  Future<Result<bool>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    return _authRepository.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
+
   Future<void> logout() async {
     await _tokenStorage.clearToken();
     state = const AuthIdle();
@@ -168,6 +194,7 @@ final authControllerProvider =
     registerUser: ref.watch(registerUserProvider),
     loginUser: ref.watch(loginUserProvider),
     getCurrentUser: ref.watch(getCurrentUserProvider),
+    authRepository: ref.watch(authRepositoryProvider),
     tokenStorage: ref.watch(tokenStorageProvider),
   );
 });
