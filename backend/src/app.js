@@ -1,8 +1,13 @@
+import path from 'path';
+import adminRouter from './modules/admin/admin.routes.js';
+
 import cors from 'cors';
 import express from 'express';
 
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { authRouter, hostRouter } from './modules/auth/auth.routes.js';
+import listingRouter from './modules/listings/listing.routes.js';
+import uploadRouter from './modules/uploads/uploads.routes.js';
 
 const app = express();
 
@@ -14,6 +19,9 @@ app.use(
 
 app.use(express.json());
 
+// Uploaded files are accessible through: http://localhost:5000/uploads/file.jpg
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -23,6 +31,9 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/hosts', hostRouter);
+app.use('/api/uploads', uploadRouter);
+app.use('/api/listings', listingRouter);
+app.use('/api/admin', adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
