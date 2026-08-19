@@ -1,13 +1,28 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Users, Home as HomeIcon, ShieldCheck, Search, Trash2 } from 'lucide-react';
-import Navbar1 from '../components/NavBar1';
-import Footer from '../components/Footer';
+import {
+  Check,
+  X,
+  Users,
+  Home as HomeIcon,
+  ShieldCheck,
+  Search,
+  Trash2,
+  PanelLeft,
+  Settings,
+  LogOut,
+  CheckCircle2,
+  Building2,
+} from 'lucide-react';
+import NavBar1 from '../components/NavBar1';
+import { useAuth } from '../context/AuthContext';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [pendingHosts, setPendingHosts] = useState([
     {
@@ -123,22 +138,128 @@ const AdminDashboard = () => {
       .includes(searchTerm.toLowerCase())
   );
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar1
-        adminName="Admin"
-        adminAvatar={null}
-        onProfileClick={() => navigate('/admin/profile')}
-        onLogout={() => navigate('/')}
-      />
+  const adminSidebarLinks = [
+    { label: 'Pending Approvals', icon: ShieldCheck, tab: 'pending', count: pendingHosts.length },
+    { label: 'Active Hosts', icon: Building2, tab: 'approved', count: approvedHosts.length },
+    { label: 'Admin Profile Settings', icon: Settings, action: () => navigate('/admin/profile') },
+  ];
 
-      <section className="pt-24 pb-20 px-6 max-w-[1200px] mx-auto">
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans">
+      <NavBar1 userName="Admin" />
+
+      {/* Top Controls with Sidebar Icon Toggle */}
+      <div className="pt-20 pb-2 px-6 max-w-[1200px] mx-auto flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(true)}
+          title="Open Admin menu"
+          className="w-10 h-10 rounded-2xl bg-white border border-border hover:border-primary text-foreground flex items-center justify-center shadow-sm hover:shadow transition-all group"
+        >
+          <PanelLeft size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+        </button>
+      </div>
+
+      {/* Sliding Sidebar Drawer */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-[100] flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+
+          {/* Drawer */}
+          <aside className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 animate-in slide-in-from-left duration-200">
+            <div>
+              <div className="flex items-center justify-between pb-5 border-b border-border mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary text-white font-bold text-[15px] flex items-center justify-center shadow-sm">
+                    A
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[14px] text-foreground leading-tight">
+                      Admin Portal
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full mt-0.5">
+                      <CheckCircle2 size={10} /> Verified Admin
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-muted-foreground"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <nav className="space-y-1">
+                {adminSidebarLinks.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.tab;
+
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        if (item.action) {
+                          item.action();
+                        } else if (item.tab) {
+                          setActiveTab(item.tab);
+                        }
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                        isActive
+                          ? 'bg-primary text-white font-semibold shadow-sm'
+                          : 'text-foreground hover:bg-gray-100/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Icon size={16} className={isActive ? 'text-white' : 'text-primary flex-shrink-0'} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.count !== undefined && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                          }`}
+                        >
+                          {item.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="pt-4 border-t border-border">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  logout();
+                  navigate('/');
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={16} />
+                Log out
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <section className="pt-6 pb-20 px-6 max-w-[1200px] mx-auto">
         {/* Header */}
-        <p className="text-[11px] font-semibold text-primary tracking-[0.15em] mb-2 uppercase">
-          Admin
-        </p>
         <h1 className="text-3xl md:text-[36px] font-bold font-serif text-foreground mb-8">
-          Dashboard
+          Admin Dashboard
         </h1>
 
         {/* Stat cards */}
@@ -146,7 +267,7 @@ const AdminDashboard = () => {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="bg-white rounded-2xl border border-border p-6 flex items-center gap-4"
+              className="bg-white rounded-2xl border border-border p-6 flex items-center gap-4 shadow-sm"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <stat.icon size={22} className="text-primary" strokeWidth={2} />
@@ -166,7 +287,7 @@ const AdminDashboard = () => {
           <button
             type="button"
             onClick={() => setActiveTab('pending')}
-            className={`px-4 py-2 rounded-full text-[13px] font-medium transition-colors ${
+            className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
               activeTab === 'pending'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-white border border-border text-muted-foreground hover:text-foreground'
@@ -177,7 +298,7 @@ const AdminDashboard = () => {
           <button
             type="button"
             onClick={() => setActiveTab('approved')}
-            className={`px-4 py-2 rounded-full text-[13px] font-medium transition-colors ${
+            className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
               activeTab === 'approved'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-white border border-border text-muted-foreground hover:text-foreground'
@@ -198,13 +319,13 @@ const AdminDashboard = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search hosts by name, property, or location"
-            className="w-full pl-11 pr-4 py-3 rounded-lg border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 bg-white focus:outline-none focus:border-primary transition-colors"
+            className="w-full pl-11 pr-4 py-3 rounded-xl border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 bg-white focus:outline-none focus:border-primary transition-colors"
           />
         </div>
 
         {/* Pending hosts list */}
         {activeTab === 'pending' && (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden">
+          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
             {filteredPending.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground text-[15px]">
                 No pending host applications.
@@ -254,7 +375,7 @@ const AdminDashboard = () => {
 
         {/* Approved hosts list */}
         {activeTab === 'approved' && (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden">
+          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
             {filteredApproved.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground text-[15px]">
                 No active hosts found.
@@ -292,8 +413,6 @@ const AdminDashboard = () => {
           </div>
         )}
       </section>
-
-      <Footer />
     </div>
   );
 };
