@@ -25,10 +25,10 @@ class ProfilePage extends ConsumerWidget {
       body: SafeArea(
         child: switch (authState) {
           AuthSuccess(:final user) => _SignedInProfileView(
-              userName: user.fullName,
-              userEmail: user.email,
-              userRole: user.role,
-            ),
+            userName: user.fullName,
+            userEmail: user.email,
+            userRole: user.role,
+          ),
           _ => const _GuestProfileView(),
         },
       ),
@@ -121,7 +121,11 @@ class _SignedInProfileView extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      userRole == 'host' ? 'Host' : 'Guest',
+                      userRole == 'host'
+                          ? 'Host'
+                          : userRole == 'admin'
+                          ? 'Admin'
+                          : 'Guest',
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -250,10 +254,7 @@ class _GuestProfileView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              Text(
-                'Welcome to EthioStays',
-                style: AppTextStyles.titleLarge,
-              ),
+              Text('Welcome to EthioStays', style: AppTextStyles.titleLarge),
               const SizedBox(height: 6),
               Text(
                 'Log in or create an account to manage your profile and bookings.',
@@ -370,11 +371,7 @@ class _ProfileTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      leading: Icon(
-        icon,
-        color: iconColor ?? AppColors.textPrimary,
-        size: 22,
-      ),
+      leading: Icon(icon, color: iconColor ?? AppColors.textPrimary, size: 22),
       title: Text(
         title,
         style: AppTextStyles.titleMedium.copyWith(
@@ -383,10 +380,7 @@ class _ProfileTile extends StatelessWidget {
         ),
       ),
       subtitle: subtitle != null
-          ? Text(
-              subtitle!,
-              style: AppTextStyles.bodySmall,
-            )
+          ? Text(subtitle!, style: AppTextStyles.bodySmall)
           : null,
       trailing: const Icon(
         Icons.chevron_right,
@@ -432,11 +426,7 @@ class _SocialButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.border),
       ),
-      child: Icon(
-        icon,
-        size: 18,
-        color: AppColors.textPrimary,
-      ),
+      child: Icon(icon, size: 18, color: AppColors.textPrimary),
     );
   }
 }
