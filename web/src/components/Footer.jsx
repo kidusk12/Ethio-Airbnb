@@ -107,19 +107,10 @@ const Footer = () => {
             <ul className="space-y-2.5">
               <li>
                 <Link
-                  to="/help"
+                  to="/about"
                   className="text-[14px] text-[oklch(0.52_0.022_118)] hover:text-primary transition-colors"
                 >
                   About
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  to="/help"
-                  className="text-[14px] text-[oklch(0.52_0.022_118)] hover:text-primary transition-colors"
-                >
-                  Contact
                 </Link>
               </li>
 
@@ -141,7 +132,7 @@ const Footer = () => {
             </h4>
 
             <ul className="space-y-2.5">
-              {['Help Center', 'Safety', 'Cancellation options'].map(
+              {['Help Center'].map(
                 (item) => (
                   <li key={item}>
                     <Link
@@ -163,7 +154,7 @@ const Footer = () => {
             </h4>
 
             <ul className="space-y-2.5">
-              {['Terms', 'Privacy', 'Community standards'].map((item) => (
+              {['Terms'].map((item) => (
                 <li key={item}>
                   <Link
                     to="/help"
@@ -185,7 +176,7 @@ const Footer = () => {
           </p>
 
           <p className="text-[13px] text-[oklch(0.52_0.022_118)]">
-            Addis Ababa, Ethiopia · Prices shown in ETB
+            Addis Ababa, Ethiopia.
           </p>
         </div>
 
