@@ -10,6 +10,8 @@ class AppTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final TextInputType? keyboardType;
   final TextCapitalization textCapitalization;
+  final int maxLines;
+  final int? minLines;
   final String? Function(String?)? validator;
 
   const AppTextField({
@@ -20,6 +22,8 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.keyboardType,
     this.textCapitalization = TextCapitalization.none,
+    this.maxLines = 1,
+    this.minLines,
     this.validator,
   });
 
@@ -30,11 +34,10 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
+      maxLines: maxLines,
+      minLines: minLines,
       validator: validator,
-      decoration: InputDecoration(
-        hintText: hint,
-        suffixIcon: suffixIcon,
-      ),
+      decoration: InputDecoration(hintText: hint, suffixIcon: suffixIcon),
     );
   }
 }

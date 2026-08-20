@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'terms_agreement_page.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/utils/validators.dart';
@@ -15,11 +15,7 @@ class RegisterPage extends ConsumerStatefulWidget {
   final String initialRole;
   final String? returnTo;
 
-  const RegisterPage({
-    super.key,
-    this.initialRole = 'guest',
-    this.returnTo,
-  });
+  const RegisterPage({super.key, this.initialRole = 'guest', this.returnTo});
 
   @override
   ConsumerState<RegisterPage> createState() => _RegisterPageState();
@@ -52,10 +48,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    ref.read(authControllerProvider.notifier).register(
+    final agreed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (context) => const TermsAgreementPage()),
+    );
+
+    if (agreed != true) return;
+    if (!mounted) return;
+
+    ref
+        .read(authControllerProvider.notifier)
+        .register(
           firstName: _firstNameController.text.trim(),
           middleName: _middleNameController.text.trim().isEmpty
               ? null
@@ -84,9 +89,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         );
       } else if (next is AuthError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next.message)));
       }
     });
 
@@ -224,9 +229,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           onTap: () {
                             final loginPath = widget.returnTo == null
                                 ? '/login'
-                                : '/login?returnTo=${Uri.encodeComponent(
-                                    widget.returnTo!,
-                                  )}';
+                                : '/login?returnTo=${Uri.encodeComponent(widget.returnTo!)}';
 
                             context.go(loginPath);
                           },

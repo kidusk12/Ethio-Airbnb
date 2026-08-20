@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-
+import '../../../auth/presentation/widgets/terms_content.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -23,10 +23,7 @@ class _PickedPhoto {
   final XFile file;
   final Uint8List bytes;
 
-  const _PickedPhoto({
-    required this.file,
-    required this.bytes,
-  });
+  const _PickedPhoto({required this.file, required this.bytes});
 }
 
 class _ListingFormPageState extends ConsumerState<ListingFormPage> {
@@ -45,7 +42,14 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
 
   static const _locations = {
     'Addis Ababa': {
-      'Addis Ababa': ['Bole', 'Kirkos', 'Yeka', 'Lideta', 'Arada', 'Kolfe Keranio'],
+      'Addis Ababa': [
+        'Bole',
+        'Kirkos',
+        'Yeka',
+        'Lideta',
+        'Arada',
+        'Kolfe Keranio',
+      ],
     },
     'Oromia': {
       'Adama': ['Bole', 'Kebele 01', 'Kebele 02'],
@@ -142,10 +146,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
 
     for (final image in selected) {
       pickedPhotos.add(
-        _PickedPhoto(
-          file: image,
-          bytes: await image.readAsBytes(),
-        ),
+        _PickedPhoto(file: image, bytes: await image.readAsBytes()),
       );
     }
 
@@ -173,9 +174,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
 
     if (!exists) {
       _updateDraft(
-        _draft.copyWith(
-          blockedDates: [..._draft.blockedDates, selectedDate],
-        ),
+        _draft.copyWith(blockedDates: [..._draft.blockedDates, selectedDate]),
       );
     }
   }
@@ -263,6 +262,8 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
   }
 
   void _showPublishSheet() {
+    bool agreedToTerms = false;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceElevated,
@@ -270,44 +271,110 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.hourglass_top_rounded,
-                  color: AppColors.warning,
-                  size: 48,
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.hourglass_top_rounded,
+                      color: AppColors.warning,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ready to publish?',
+                      style: AppTextStyles.displayMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${_titleController.text.trim()} will be submitted for admin review.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: agreedToTerms,
+                          onChanged: (value) => setSheetState(
+                            () => agreedToTerms = value ?? false,
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setSheetState(
+                              () => agreedToTerms = !agreedToTerms,
+                            ),
+                            child: Text(
+                              'I agree to the Terms & Conditions',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (dialogContext) => Dialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: SizedBox(
+                              width: double.maxFinite,
+                              height: 500,
+                              child: Column(
+                                children: [
+                                  AppBar(
+                                    title: const Text('Terms & Conditions'),
+                                    automaticallyImplyLeading: false,
+                                    actions: [
+                                      IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () =>
+                                            Navigator.of(dialogContext).pop(),
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      padding: const EdgeInsets.all(20),
+                                      child: const TermsContent(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('Read Terms & Conditions'),
+                    ),
+                    const SizedBox(height: 8),
+                    PrimaryButton(
+                      label: 'Publish listing',
+                      onPressed: agreedToTerms
+                          ? () {
+                              Navigator.pop(sheetContext);
+                              _showSubmittedDialog();
+                            }
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: const Text('Continue editing'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Ready to publish?',
-                  style: AppTextStyles.displayMedium,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  '${_titleController.text.trim()} will be submitted for admin review.',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodyMedium,
-                ),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: 'Publish listing',
-                  onPressed: () {
-                    Navigator.pop(sheetContext);
-                    _showSubmittedDialog();
-                  },
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(sheetContext),
-                  child: const Text('Continue editing'),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -373,10 +440,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  _steps[state.step],
-                  style: AppTextStyles.displayMedium,
-                ),
+                Text(_steps[state.step], style: AppTextStyles.displayMedium),
                 const SizedBox(height: 14),
                 LinearProgressIndicator(
                   value: progress,
@@ -471,10 +535,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.lightbulb_outline,
-                color: AppColors.primary,
-              ),
+              const Icon(Icons.lightbulb_outline, color: AppColors.primary),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -526,13 +587,15 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
         ? <String>[]
         : _locations[_selectedRegion]!.keys.toList();
 
-    final subCities =
-        _selectedCity == null ? <String>[] : _locations[_selectedRegion]![_selectedCity]!;
+    final subCities = _selectedCity == null
+        ? <String>[]
+        : _locations[_selectedRegion]![_selectedCity]!;
 
     return _stepBody(
       title: 'Where is your property?',
       subtitle: 'Select the area where guests will stay.',
-      tip: 'The street address is used for booking administration. Guests see the general area.',
+      tip:
+          'The street address is used for booking administration. Guests see the general area.',
       child: Column(
         children: [
           TextField(
@@ -545,10 +608,8 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
             decoration: const InputDecoration(hintText: 'Select region'),
             items: _locations.keys
                 .map(
-                  (region) => DropdownMenuItem(
-                    value: region,
-                    child: Text(region),
-                  ),
+                  (region) =>
+                      DropdownMenuItem(value: region, child: Text(region)),
                 )
                 .toList(),
             onChanged: (value) {
@@ -564,12 +625,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
             value: _selectedCity,
             decoration: const InputDecoration(hintText: 'Select city'),
             items: cities
-                .map(
-                  (city) => DropdownMenuItem(
-                    value: city,
-                    child: Text(city),
-                  ),
-                )
+                .map((city) => DropdownMenuItem(value: city, child: Text(city)))
                 .toList(),
             onChanged: _selectedRegion == null
                 ? null
@@ -583,13 +639,13 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
             value: _selectedSubCity,
-            decoration: const InputDecoration(hintText: 'Select sub-city / area'),
+            decoration: const InputDecoration(
+              hintText: 'Select sub-city / area',
+            ),
             items: subCities
                 .map(
-                  (subCity) => DropdownMenuItem(
-                    value: subCity,
-                    child: Text(subCity),
-                  ),
+                  (subCity) =>
+                      DropdownMenuItem(value: subCity, child: Text(subCity)),
                 )
                 .toList(),
             onChanged: _selectedCity == null
@@ -640,9 +696,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
         ),
       ),
       leading: Icon(
-        file == null
-            ? Icons.upload_file_outlined
-            : Icons.check_circle_outline,
+        file == null ? Icons.upload_file_outlined : Icons.check_circle_outline,
         color: file == null ? AppColors.textMuted : AppColors.success,
       ),
       title: Text(label, style: AppTextStyles.titleMedium),
@@ -655,7 +709,8 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
     return _stepBody(
       title: 'Add property photos',
       subtitle: 'Add clear photos so guests understand your space.',
-      tip: 'Use bright photos of the bedrooms, bathroom, kitchen, and main living space.',
+      tip:
+          'Use bright photos of the bedrooms, bathroom, kitchen, and main living space.',
       child: Column(
         children: [
           if (_photos.isNotEmpty)
@@ -716,7 +771,8 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
     return _stepBody(
       title: 'Tell guests about your place',
       subtitle: 'A good description helps guests choose with confidence.',
-      tip: 'Mention nearby landmarks, comfort, and anything unique about the property.',
+      tip:
+          'Mention nearby landmarks, comfort, and anything unique about the property.',
       child: Column(
         children: [
           TextField(
@@ -764,9 +820,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
                 selectedAmenities.add(label);
               }
 
-              _updateDraft(
-                _draft.copyWith(amenities: selectedAmenities),
-              );
+              _updateDraft(_draft.copyWith(amenities: selectedAmenities));
             },
           );
         }).toList(),
@@ -864,10 +918,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
           ),
           const SizedBox(height: 16),
           if (_draft.blockedDates.isEmpty)
-            Text(
-              'No dates are blocked yet.',
-              style: AppTextStyles.bodyMedium,
-            )
+            Text('No dates are blocked yet.', style: AppTextStyles.bodyMedium)
           else
             Wrap(
               spacing: 8,
@@ -898,7 +949,8 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
     return _stepBody(
       title: 'Set house rules',
       subtitle: 'Select the rules that apply to your property.',
-      tip: 'Clear rules help prevent misunderstandings between hosts and guests.',
+      tip:
+          'Clear rules help prevent misunderstandings between hosts and guests.',
       child: Column(
         children: [
           ..._commonRules.map((rule) {
@@ -938,9 +990,7 @@ class _ListingFormPageState extends ConsumerState<ListingFormPage> {
                   }
 
                   _updateDraft(
-                    _draft.copyWith(
-                      houseRules: [..._draft.houseRules, rule],
-                    ),
+                    _draft.copyWith(houseRules: [..._draft.houseRules, rule]),
                   );
 
                   _otherRuleController.clear();
