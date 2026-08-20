@@ -36,7 +36,8 @@ class ListingHostInfoRow extends StatelessWidget {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage: displayImage != null && displayImage.isNotEmpty
+                  backgroundImage:
+                      displayImage != null && displayImage.isNotEmpty
                       ? NetworkImage(displayImage)
                       : null,
                   child: displayImage == null || displayImage.isEmpty
@@ -73,24 +74,6 @@ class ListingHostInfoRow extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Fix unbounded width error by constraining button size and layout style
-          SizedBox(
-            height: 40,
-            child: OutlinedButton(
-              onPressed: onContactHost ?? () {},
-              style: OutlinedButton.styleFrom(
-                minimumSize: Size.zero, // Overrides global unbounded expanded styles
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                foregroundColor: Colors.black,
-                side: const BorderSide(color: Colors.black),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Contact Host'),
             ),
           ),
         ],

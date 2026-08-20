@@ -39,41 +39,6 @@ class ExploreListingCard extends StatelessWidget {
                         Container(color: AppColors.chipBackground),
                   ),
                 ),
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      listing.category,
-                      style: AppTextStyles.caption.copyWith(fontSize: 10),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: GestureDetector(
-                    onTap: onFavoriteTap,
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceElevated.withOpacity(0.95),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
-                        size: 16,
-                        color: isFavorite ? AppColors.primary : AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -95,8 +60,14 @@ class ExploreListingCard extends StatelessWidget {
             children: [
               const Icon(Icons.star, size: 12, color: AppColors.ratingStar),
               const SizedBox(width: 3),
-              Text(listing.rating.toStringAsFixed(2), style: AppTextStyles.rating.copyWith(fontSize: 12)),
-              Text(' (${listing.reviewCount})', style: AppTextStyles.bodySmall.copyWith(fontSize: 11)),
+              Text(
+                listing.rating.toStringAsFixed(2),
+                style: AppTextStyles.rating.copyWith(fontSize: 12),
+              ),
+              Text(
+                ' (${listing.reviewCount})',
+                style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
+              ),
             ],
           ),
           Text(

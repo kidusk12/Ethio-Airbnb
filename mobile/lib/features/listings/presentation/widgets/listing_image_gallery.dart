@@ -30,7 +30,11 @@ class _ListingImageGalleryState extends State<ListingImageGallery> {
                 width: double.infinity,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey.shade300,
-                  child: const Icon(Icons.apartment, size: 50, color: Colors.grey),
+                  child: const Icon(
+                    Icons.apartment,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
                 ),
               );
             },
@@ -48,29 +52,15 @@ class _ListingImageGalleryState extends State<ListingImageGallery> {
               CircleAvatar(
                 backgroundColor: Colors.white,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black, size: 20),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.black,
+                    size: 20,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: IconButton(
-                      icon: const Icon(Icons.share_outlined, color: Colors.black, size: 20),
-                      onPressed: () {},
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: IconButton(
-                      icon: const Icon(Icons.favorite_border, color: Colors.black, size: 20),
-                      onPressed: () {},
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox.shrink(),
             ],
           ),
         ),
@@ -87,7 +77,11 @@ class _ListingImageGalleryState extends State<ListingImageGallery> {
             ),
             child: Text(
               '${_currentPage + 1} / ${widget.images.length}',
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
