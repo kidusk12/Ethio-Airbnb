@@ -1,1 +1,0 @@
-// TODO: FR-1 Auth — register, login, logout, password hashing
