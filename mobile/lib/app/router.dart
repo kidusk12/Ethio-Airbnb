@@ -23,6 +23,7 @@ import '../features/auth/presentation/pages/terms_privacy_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/presentation/providers/auth_providers.dart';
 import 'go_router_refresh_notifier.dart';
+import '../features/auth/presentation/pages/mock_login_page.dart';
 
 /// Central route table.
 ///
@@ -209,6 +210,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'];
           return ListingDetailPage(listingId: id);
         },
+      ),
+      GoRoute(
+        path: '/test/mock-login',
+        builder: (context, state) => const MockLoginPage(),
       ),
       GoRoute(
         path: '/test/booking-checkout',
