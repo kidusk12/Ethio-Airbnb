@@ -44,7 +44,9 @@ const Footer = () => {
             <div className="flex gap-2">
             {/* Instagram */}
             <a
-                href="#"
+                href="https://www.instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="Instagram"
                 className="w-10 h-10 rounded-lg border border-[oklch(0.52_0.022_118_/_0.12)] bg-white/70 flex items-center justify-center text-[oklch(0.52_0.022_118)] hover:text-[#E4405F] transition-colors"
             >
@@ -59,7 +61,9 @@ const Footer = () => {
 
             {/* Facebook */}
             <a
-                href="#"
+                href="https://www.facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="Facebook"
                 className="w-10 h-10 rounded-lg border border-[oklch(0.52_0.022_118_/_0.12)] bg-white/70 flex items-center justify-center text-[oklch(0.52_0.022_118)] hover:text-[#1877F2] transition-colors"
             >
@@ -74,7 +78,9 @@ const Footer = () => {
 
             {/* X */}
             <a
-                href="#"
+                href="https://www.x.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="X"
                 className="w-10 h-10 rounded-lg border border-[oklch(0.52_0.022_118_/_0.12)] bg-white/70 flex items-center justify-center text-[oklch(0.52_0.022_118)] hover:text-black transition-colors"
             >
@@ -83,7 +89,9 @@ const Footer = () => {
 
             {/* YouTube */}
             <a
-                href="#"
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="YouTube"
                 className="w-10 h-10 rounded-lg border border-[oklch(0.52_0.022_118_/_0.12)] bg-white/70 flex items-center justify-center text-[oklch(0.52_0.022_118)] hover:text-[#FF0000] transition-colors"
             >
@@ -157,7 +165,7 @@ const Footer = () => {
               {['Terms'].map((item) => (
                 <li key={item}>
                   <Link
-                    to="/help"
+                    to="/terms"
                     className="text-[14px] text-[oklch(0.52_0.022_118)] hover:text-primary transition-colors"
                   >
                     {item}
@@ -186,4 +194,3 @@ const Footer = () => {
 };
 
 export default Footer;
-

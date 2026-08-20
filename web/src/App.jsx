@@ -7,11 +7,14 @@ import Host from "./pages/Host";
 import List from "./pages/List";
 import Host_dashboard from "./pages/Host_dashboard";
 import Explore from "./pages/Explore";
-
+import About from "./pages/About";
+import Help from "./pages/Help";
+import Terms from "./pages/Terms";
 import PropertyDetail from "./pages/PropertyDetail";
 import Book from "./pages/Book";
+import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminProfile from "./pages/AdminProfile";
+import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -35,8 +38,12 @@ function App() {
           <Route path="/host/list" element={<List />} />
           <Route path="/host/Host_dashboard" element={<Host_dashboard />} />
           <Route path="/host/dashboard" element={<Host_dashboard />} />
+          <Route path="/guest_dashboard" element={<UserDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/profile" element={<AdminProfile />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/terms" element={<Terms />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
