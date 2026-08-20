@@ -1,195 +1,181 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Plus } from 'lucide-react';
-import NavBar1 from '../components/NavBar1';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from "react";
+import { Plus } from "lucide-react";
+import NavBar1 from "../components/NavBar1";
 
-const AdminProfile = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+// ─── Design tokens (matches Dashboard.jsx) ───────────────────────────────────
+const A = "#E8473F";
 
+function Profile({ guestName, guestEmail, embedded = false }) {
   const [profile, setProfile] = useState({
-    name: user?.name || 'Abebe Tesfaye',
-    email: user?.email || 'abebe@ethiostays.com',
-    avatar: null,
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    name:            guestName  || "Kidus",
+    email:           guestEmail || "kidus@ethiostays.com",
+    avatar:          null,
+    currentPassword: "",
+    newPassword:     "",
+    confirmPassword: "",
   });
-  const [profileSaved, setProfileSaved] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const updateProfileField = (field, value) => {
-    setProfile((prev) => ({ ...prev, [field]: value }));
-    setProfileSaved(false);
-  };
+  function update(field, value) {
+    setProfile((p) => ({ ...p, [field]: value }));
+    setSaved(false);
+  }
 
-  const handleAvatarUpload = (e) => {
+  function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      updateProfileField('avatar', reader.result);
-    };
+    reader.onload = () => update("avatar", reader.result);
     reader.readAsDataURL(file);
-  };
+  }
 
-  const handleSaveProfile = () => {
-    console.log('Saving profile', profile);
-    setProfile((prev) => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    }));
-    setProfileSaved(true);
-  };
+  function handleSave() {
+    setProfile((p) => ({ ...p, currentPassword: "", newPassword: "", confirmPassword: "" }));
+    setSaved(true);
+  }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
-      <NavBar1
-        userName={profile.name}
-        userAvatar={profile.avatar}
-      />
+  const inputCls = "w-full px-4 py-3 rounded-xl border border-gray-200 text-[15px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#E8473F] transition-colors bg-white";
+  const labelCls = "block text-[14px] font-semibold text-gray-800 mb-1.5";
 
-      <section className="pt-28 pb-20 px-6 max-w-[1200px] mx-auto">
-        {/* Back button */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[14px] font-semibold text-muted-foreground hover:text-foreground transition-colors mb-6"
+  const card = (
+    /* Outer wrapper — full width, card centred */
+    <div className="flex justify-center">
+      <div className="w-full max-w-[560px] rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+
+        {/* ── RED top half — avatar + name only ── */}
+        <div
+          className="px-8 pt-8 pb-8 flex flex-col items-center gap-4"
+          style={{ background: A }}
         >
-          <ArrowLeft size={17} />
-          Back
-        </button>
-
-        <h1 className="text-3xl md:text-[36px] font-bold font-serif text-foreground mb-8">
-          Profile Settings
-        </h1>
-
-        <div className="bg-white rounded-3xl border border-border p-8 max-w-[560px] mx-auto shadow-sm">
-          {/* Avatar upload with + icon on current image */}
-          <div className="flex items-center gap-6 mb-8 pb-6 border-b border-border">
-            <label className="relative w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center overflow-visible flex-shrink-0 cursor-pointer group shadow-sm">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-              <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                {profile.avatar ? (
-                  <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-primary text-white font-bold text-[32px] flex items-center justify-center">
-                    {profile.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-
-              {/* + Icon Badge Overlay on Image */}
-              <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary group-hover:bg-[#c82333] text-white flex items-center justify-center shadow-lg border-2 border-white transition-all transform group-hover:scale-110">
-                <Plus size={18} strokeWidth={3} />
-              </div>
-            </label>
-
-            <div>
-              <h3 className="font-bold text-[16px] text-foreground mb-1">
-                Profile Photo
-              </h3>
-              <p className="text-[13px] text-muted-foreground">
-                Click the photo or <strong>+</strong> badge to upload a new avatar.
-              </p>
+          {/* Avatar upload */}
+          <label className="relative cursor-pointer group flex-shrink-0">
+            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+            <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white/30">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-white font-bold text-[36px]"
+                  style={{ background: "rgba(255,255,255,0.25)" }}
+                >
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
+            {/* + badge */}
+            <div
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-all group-hover:scale-110"
+              style={{ background: "#222" }}
+            >
+              <Plus size={15} color="#fff" strokeWidth={3} />
+            </div>
+          </label>
+
+          {/* Name + role */}
+          <div className="text-center">
+            <p className="text-white font-bold text-[20px] leading-tight">{profile.name}</p>
+            <p className="text-white/70 text-[13px] mt-1">Guest · EthioStays</p>
+            <p className="text-white/55 text-[12px] mt-0.5">Click the photo to change your avatar</p>
           </div>
+        </div>
+
+        {/* ── WHITE bottom half — form ── */}
+        <div className="bg-white px-8 py-8">
 
           {/* Name */}
           <div className="mb-5">
-            <label className="block text-[14px] font-semibold text-foreground mb-1.5">
-              Full name
-            </label>
+            <label className={labelCls}>Full name</label>
             <input
               type="text"
               value={profile.name}
-              onChange={(e) => updateProfileField('name', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-border text-[15px] text-foreground focus:outline-none focus:border-primary transition-colors"
+              onChange={(e) => update("name", e.target.value)}
+              className={inputCls}
             />
           </div>
 
           {/* Email */}
-          <div className="mb-8">
-            <label className="block text-[14px] font-semibold text-foreground mb-1.5">
-              Email address
-            </label>
+          <div className="mb-8 pb-8 border-b border-gray-100">
+            <label className={labelCls}>Email address</label>
             <input
               type="email"
               value={profile.email}
-              onChange={(e) => updateProfileField('email', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-border text-[15px] text-foreground focus:outline-none focus:border-primary transition-colors"
+              onChange={(e) => update("email", e.target.value)}
+              className={inputCls}
             />
           </div>
 
-          {/* Password */}
-          <h3 className="text-[15px] font-bold text-foreground mb-4">
-            Change password
-          </h3>
+          {/* Password section */}
+          <h3 className="text-[15px] font-bold text-gray-900 mb-4">Change password</h3>
 
           <div className="mb-4">
-            <label className="block text-[14px] font-semibold text-foreground mb-1.5">
-              Current password
-            </label>
+            <label className={labelCls}>Current password</label>
             <input
               type="password"
               value={profile.currentPassword}
-              onChange={(e) => updateProfileField('currentPassword', e.target.value)}
+              onChange={(e) => update("currentPassword", e.target.value)}
               placeholder="Enter current password"
-              className="w-full px-4 py-3 rounded-xl border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+              className={inputCls}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <div>
-              <label className="block text-[14px] font-semibold text-foreground mb-1.5">
-                New password
-              </label>
+              <label className={labelCls}>New password</label>
               <input
                 type="password"
                 value={profile.newPassword}
-                onChange={(e) => updateProfileField('newPassword', e.target.value)}
+                onChange={(e) => update("newPassword", e.target.value)}
                 placeholder="At least 8 characters"
-                className="w-full px-4 py-3 rounded-xl border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+                className={inputCls}
               />
             </div>
-
             <div>
-              <label className="block text-[14px] font-semibold text-foreground mb-1.5">
-                Confirm new password
-              </label>
+              <label className={labelCls}>Confirm new password</label>
               <input
                 type="password"
                 value={profile.confirmPassword}
-                onChange={(e) => updateProfileField('confirmPassword', e.target.value)}
+                onChange={(e) => update("confirmPassword", e.target.value)}
                 placeholder="Re-enter new password"
-                className="w-full px-4 py-3 rounded-xl border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+                className={inputCls}
               />
             </div>
           </div>
 
+          {/* Save */}
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={handleSaveProfile}
-              className="bg-primary hover:bg-[#c82333] text-white px-7 py-3 rounded-xl text-[14px] font-bold transition-all shadow-sm"
+              onClick={handleSave}
+              className="px-7 py-3 rounded-xl text-[14px] font-bold text-white shadow-sm transition-opacity hover:opacity-90"
+              style={{ background: A }}
             >
               Save changes
             </button>
-            {profileSaved && (
-              <span className="text-[14px] text-green-600 font-semibold">Changes saved successfully</span>
+            {saved && (
+              <span className="text-[14px] font-semibold text-green-600">Changes saved successfully</span>
             )}
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
-};
 
-export default AdminProfile;
+  // Embedded inside another page (e.g. as a Dashboard tab) — just the card, no navbar/page chrome
+  if (embedded) return card;
+
+  // Standalone page — include the navbar and page padding
+  return (
+    <div className="min-h-screen" style={{ background: "#f7f6f4" }}>
+      <NavBar1
+        userName={profile.name}
+        showDashboardLink={false}
+        onProfileClick={() => {}}
+      />
+      <main className="max-w-[1200px] mx-auto px-5 md:px-8 lg:px-10 pt-24 pb-24">
+        {card}
+      </main>
+    </div>
+  );
+}
+
+export default Profile;
