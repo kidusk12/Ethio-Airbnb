@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
  * - rangeEnd: Date | null (for range mode)
  * - onSelectRange: ({ start, end }: { start: Date, end: Date | null }) => void
  * - blockedDates: Date[] | string[]
+ * - markedAvailable: Date[] | string[] (dates the host has explicitly confirmed as available)
  * - onToggleDate: (date: Date) => void (for host block/unblock mode)
  * - minDate: Date | null (defaults to today)
  * - position: 'top' | 'bottom' | 'inline' (default: 'inline')
@@ -24,6 +25,7 @@ export const Calendar = ({
   rangeEnd = null,
   onSelectRange,
   blockedDates = [],
+  markedAvailable = [],
   onToggleDate,
   minDate = new Date(),
   position = 'inline',
@@ -71,6 +73,10 @@ export const Calendar = ({
 
   const isDateBlocked = (date) => {
     return blockedDates.some((b) => isSameDay(b, date));
+  };
+
+  const isDateMarkedAvailable = (date) => {
+    return markedAvailable.some((b) => isSameDay(b, date));
   };
 
   const isDateInRange = (date) => {
@@ -127,6 +133,7 @@ export const Calendar = ({
     const isRangeEnd = isSameDay(date, rangeEnd);
     const inRange = isDateInRange(date);
     const blocked = isDateBlocked(date);
+    const markedAvail = isDateMarkedAvailable(date);
 
     let dayClasses = 'w-7 h-7 text-[12px] flex items-center justify-center rounded-lg transition-all select-none ';
 
@@ -136,6 +143,8 @@ export const Calendar = ({
       dayClasses += 'bg-primary text-white font-semibold shadow-sm scale-105 ';
     } else if (inRange) {
       dayClasses += 'bg-primary/10 text-primary font-medium rounded-none ';
+    } else if (markedAvail) {
+      dayClasses += 'border border-green-500 text-green-600 font-semibold hover:bg-green-50 cursor-pointer ';
     } else if (isToday) {
       dayClasses += 'border border-primary/40 text-primary font-bold hover:bg-primary/10 ';
     } else if (isPast) {
@@ -215,12 +224,23 @@ export const Calendar = ({
       <div className="grid grid-cols-7 gap-0.5 justify-items-center">{days}</div>
 
       {/* Mini legend / helper */}
-      {blockedDates.length > 0 && (
+      {(blockedDates.length > 0 || markedAvailable.length > 0) && (
         <div className="mt-2.5 pt-2 border-t border-border/70 flex items-center justify-between text-[10px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-primary/20 border border-primary inline-block" /> Blocked
+          <div className="flex items-center gap-2.5">
+            {blockedDates.length > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-primary/20 border border-primary inline-block" /> Blocked
+              </span>
+            )}
+            {markedAvailable.length > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-white border border-green-500 inline-block" /> Available
+              </span>
+            )}
+          </div>
+          <span className="font-medium text-foreground">
+            {blockedDates.length} blocked
           </span>
-          <span className="font-medium text-foreground">{blockedDates.length} days blocked</span>
         </div>
       )}
     </div>
