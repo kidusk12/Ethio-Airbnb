@@ -3,416 +3,601 @@ import { useNavigate } from 'react-router-dom';
 import {
   Check,
   X,
-  Users,
-  Home as HomeIcon,
-  ShieldCheck,
+  Menu,
+  FileText,
   Search,
-  Trash2,
-  PanelLeft,
-  Settings,
+  ArrowUpRight,
+  ArrowDownLeft,
   LogOut,
+  LayoutGrid,
+  User,
+  ShieldCheck,
   CheckCircle2,
-  Building2,
+  AlertCircle,
+  Clock,
+  Settings,
 } from 'lucide-react';
 import NavBar1 from '../components/NavBar1';
 import { useAuth } from '../context/AuthContext';
+import Profile from './Profile';
+
+// Color theme
+const A = "#E8473F";
+const A_DARK = "#C73B34";
+const A_LITE = "#fdf2f2";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  
+  const [activeTab, setActiveTab] = useState('listings'); // 'listings', 'payments', 'payouts', 'transactions', 'profile'
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const [pendingHosts, setPendingHosts] = useState([
+  // 1. Listings Approval State
+  const [listings, setListings] = useState([
     {
-      id: 'h1',
-      name: 'Selamawit Tesfaye',
-      email: 'selam.tesfaye@example.com',
-      property: 'Bole Skyline Suite',
-      location: 'Bole, Addis Ababa',
-      submitted: 'Aug 14, 2026',
+      id: 'l1',
+      title: 'Modern 2BR Apartment, Bole',
+      host: 'Selam Tesfaye',
+      filesCount: 3,
+      submitted: '3h ago',
+      status: 'Pending',
     },
     {
-      id: 'h2',
-      name: 'Dawit Mekonnen',
-      email: 'dawit.m@example.com',
-      property: 'Hawassa Lake Villa',
-      location: 'Lake Hawassa, Hawassa',
-      submitted: 'Aug 13, 2026',
+      id: 'l2',
+      title: 'Cozy Studio near Plazza',
+      host: 'Dawit Bekele',
+      filesCount: 1,
+      submitted: '1d ago',
+      status: 'Pending',
     },
     {
-      id: 'h3',
-      name: 'Bethlehem Alemu',
-      email: 'beth.alemu@example.com',
-      property: 'Lalibela Stone Guesthouse',
-      location: 'Old Town, Lalibela',
-      submitted: 'Aug 12, 2026',
-    },
-  ]);
-
-  const [approvedHosts, setApprovedHosts] = useState([
-    {
-      id: 'h4',
-      name: 'Yonas Girma',
-      email: 'yonas.girma@example.com',
-      property: 'Bahir Dar Garden House',
-      location: 'Tana Lakeside, Bahir Dar',
-      approved: 'Jul 28, 2026',
+      id: 'l3',
+      title: 'Traditional Compound House, CMC',
+      host: 'Selam Tesfaye',
+      filesCount: 4,
+      submitted: '40m ago',
+      status: 'Pending',
     },
     {
-      id: 'h5',
-      name: 'Hana Solomon',
-      email: 'hana.solomon@example.com',
-      property: 'Kazanchis Design Loft',
-      location: 'Kazanchis, Addis Ababa',
-      approved: 'Jul 20, 2026',
-    },
-    {
-      id: 'h6',
-      name: 'Abel Fikru',
-      email: 'abel.fikru@example.com',
-      property: 'Dire Dawa Courtyard Stay',
-      location: 'Kezira, Dire Dawa',
-      approved: 'Jul 10, 2026',
+      id: 'l4',
+      title: 'Lakeview Villa, Bishoftu',
+      host: 'Meron Alemu',
+      filesCount: 1,
+      submitted: '3d ago',
+      status: 'Approved',
     },
   ]);
 
-  const stats = [
+  // 2. Payments Verification State
+  const [payments, setPayments] = useState([
     {
-      label: 'Total hosts',
-      value: approvedHosts.length,
-      icon: HomeIcon,
+      id: 'pay1',
+      title: 'Modern 2BR Apartment, Bole',
+      host: 'Selam Tesfaye',
+      guest: 'Nahom Girma',
+      amount: 4200.00,
+      slaWarning: 'Past 1hr SLA — needs attention',
+      refCode: '',
+      status: 'Pending',
     },
     {
-      label: 'Total guests',
-      value: 1284,
-      icon: Users,
+      id: 'pay2',
+      title: 'Cozy Studio near Piazza',
+      host: 'Dawit Bekele',
+      guest: 'Rediet Solomon',
+      amount: 1800.00,
+      slaWarning: 'Past 1hr SLA — needs attention',
+      refCode: '',
+      status: 'Pending',
     },
     {
-      label: 'Pending approval',
-      value: pendingHosts.length,
-      icon: ShieldCheck,
+      id: 'pay3',
+      title: 'Lakeview Villa, Bishoftu',
+      host: 'Meron Alemu',
+      guest: 'Fasika Yohannes',
+      amount: 6100.00,
+      slaWarning: '',
+      refCode: '',
+      status: 'Pending',
     },
+  ]);
+
+  // 3. Payouts Due State
+  const [payouts, setPayouts] = useState([
+    {
+      id: 'payout1',
+      host: 'Meron Alemu',
+      amount: 2975.00,
+      total: 3500.00,
+      commissionPercent: 15,
+      commissionAmount: 525.00,
+      slaText: '15h 32m left',
+      isWarning: false,
+      refCode: '',
+      status: 'Pending',
+    },
+    {
+      id: 'payout2',
+      host: 'Dawit Bekele',
+      amount: 1870.00,
+      total: 2200.00,
+      commissionPercent: 15,
+      commissionAmount: 330.00,
+      slaText: 'Past 24hr SLA — pay host now',
+      isWarning: true,
+      refCode: '',
+      status: 'Pending',
+    },
+    {
+      id: 'payout3',
+      host: 'Selam Tesfaye',
+      amount: 4400.00,
+      total: 5000.00,
+      commissionPercent: 12,
+      commissionAmount: 600.00,
+      slaText: 'Past 24hr SLA — pay host now',
+      isWarning: true,
+      refCode: '',
+      status: 'Pending',
+    },
+  ]);
+
+  // 4. Transaction Log State
+  const [transactions, setTransactions] = useState([
+    {
+      id: 'tx1',
+      type: 'Payout',
+      recipient: 'Meron Alemu',
+      code: 'ETB-OUT-20260812-9002',
+      amount: 2975.00,
+      timestamp: '2026-08-18 18:09:46',
+    },
+    {
+      id: 'tx2',
+      type: 'Payment',
+      sender: 'Betelhem Aklilu',
+      code: 'ETB-PAY-20260810-9001',
+      amount: 3500.00,
+      timestamp: '2026-08-17 18:09:46',
+    },
+  ]);
+
+  // Helper actions
+  const handleApproveListing = (id) => {
+    setListings(prev =>
+      prev.map(item => item.id === id ? { ...item, status: 'Approved' } : item)
+    );
+  };
+
+  const handleRejectListing = (id) => {
+    setListings(prev =>
+      prev.map(item => item.id === id ? { ...item, status: 'Rejected' } : item)
+    );
+  };
+
+  const handleConfirmPayment = (id) => {
+    const payment = payments.find(p => p.id === id);
+    if (!payment) return;
+    
+    // Add to transaction log
+    const code = payment.refCode.trim() || `ETB-PAY-${Date.now().toString().slice(-6)}`;
+    const newTx = {
+      id: `tx_${Date.now()}`,
+      type: 'Payment',
+      sender: payment.guest,
+      code: code,
+      amount: payment.amount,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    };
+    setTransactions(prev => [newTx, ...prev]);
+
+    // Remove from pending payments
+    setPayments(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleMarkPaid = (id) => {
+    const payout = payouts.find(p => p.id === id);
+    if (!payout) return;
+
+    // Add to transaction log
+    const code = payout.refCode.trim() || `ETB-OUT-${Date.now().toString().slice(-6)}`;
+    const newTx = {
+      id: `tx_${Date.now()}`,
+      type: 'Payout',
+      recipient: payout.host,
+      code: code,
+      amount: payout.amount,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    };
+    setTransactions(prev => [newTx, ...prev]);
+
+    // Remove from pending payouts
+    setPayouts(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Badge counts
+  const pendingListingsCount = listings.filter(l => l.status === 'Pending').length;
+  const pendingPaymentsCount = payments.length;
+  const pendingPayoutsCount = payouts.length;
+
+  const sidebarLinks = [
+    { label: 'Listings approval', key: 'listings', badge: pendingListingsCount },
+    { label: 'Payments verification', key: 'payments', badge: pendingPaymentsCount },
+    { label: 'Payouts due', key: 'payouts', badge: pendingPayoutsCount },
+    { label: 'Transaction log', key: 'transactions' },
+    { label: 'Profile Settings', key: 'profile' },
   ];
 
-  const approveHost = (id) => {
-    const host = pendingHosts.find((h) => h.id === id);
-    if (!host) return;
-
-    setPendingHosts((prev) => prev.filter((h) => h.id !== id));
-    setApprovedHosts((prev) => [
-      {
-        id: host.id,
-        name: host.name,
-        email: host.email,
-        property: host.property,
-        location: host.location,
-        approved: new Date().toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-      },
-      ...prev,
-    ]);
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case 'listings':
+        return 'Listings approval';
+      case 'payments':
+        return 'Payments verification';
+      case 'payouts':
+        return 'Payouts due';
+      case 'transactions':
+        return 'Transaction log';
+      case 'profile':
+        return 'Admin Profile';
+      default:
+        return 'Admin Portal';
+    }
   };
-
-  const rejectHost = (id) => {
-    setPendingHosts((prev) => prev.filter((h) => h.id !== id));
-  };
-
-  const removeHost = (id) => {
-    setApprovedHosts((prev) => prev.filter((h) => h.id !== id));
-  };
-
-  const filteredPending = pendingHosts.filter((host) =>
-    `${host.name} ${host.property} ${host.location}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
-  const filteredApproved = approvedHosts.filter((host) =>
-    `${host.name} ${host.property} ${host.location}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
-  const adminSidebarLinks = [
-    { label: 'Pending Approvals', icon: ShieldCheck, tab: 'pending', count: pendingHosts.length },
-    { label: 'Active Hosts', icon: Building2, tab: 'approved', count: approvedHosts.length },
-    { label: 'Admin Profile Settings', icon: Settings, action: () => navigate('/admin/profile') },
-  ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
-      <NavBar1 userName="Admin" />
+    <div className="min-h-screen bg-[#FAF6F0] text-foreground font-sans flex flex-col pb-10">
+      <NavBar1
+        userName="Admin"
+        onLogout={() => { logout(); navigate('/'); }}
+        dashboardLabel="My Dashboard"
+        dashboardLink="/admin"
+        showProfileLink={false}
+      />
 
-      {/* Top Controls with Sidebar Icon Toggle */}
-      <div className="pt-20 pb-2 px-6 max-w-[1200px] mx-auto flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setIsSidebarOpen(true)}
-          title="Open Admin menu"
-          className="w-10 h-10 rounded-2xl bg-white border border-border hover:border-primary text-foreground flex items-center justify-center shadow-sm hover:shadow transition-all group"
-        >
-          <PanelLeft size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-        </button>
-      </div>
-
-      {/* Sliding Sidebar Drawer */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-[100] flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-
-          {/* Drawer */}
-          <aside className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 animate-in slide-in-from-left duration-200">
-            <div>
-              <div className="flex items-center justify-between pb-5 border-b border-border mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-white font-bold text-[15px] flex items-center justify-center shadow-sm">
-                    A
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[14px] text-foreground leading-tight">
-                      Admin Portal
-                    </h3>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full mt-0.5">
-                      <CheckCircle2 size={10} /> Verified Admin
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-muted-foreground"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <nav className="space-y-1">
-                {adminSidebarLinks.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.tab;
-
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        if (item.action) {
-                          item.action();
-                        } else if (item.tab) {
-                          setActiveTab(item.tab);
-                        }
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
-                        isActive
-                          ? 'bg-primary text-white font-semibold shadow-sm'
-                          : 'text-foreground hover:bg-gray-100/80'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon size={16} className={isActive ? 'text-white' : 'text-primary flex-shrink-0'} />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                      {item.count !== undefined && (
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
-                          }`}
-                        >
-                          {item.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-
-            <div className="pt-4 border-t border-border">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  logout();
-                  navigate('/');
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <LogOut size={16} />
-                Log out
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      <section className="pt-6 pb-20 px-6 max-w-[1200px] mx-auto">
-        {/* Header */}
-        <h1 className="text-3xl md:text-[36px] font-bold font-serif text-foreground mb-8">
-          Admin Dashboard
-        </h1>
-
-        {/* Stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-2xl border border-border p-6 flex items-center gap-4 shadow-sm"
-            >
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <stat.icon size={22} className="text-primary" strokeWidth={2} />
+      {/* Sliding Sidebar Menu */}
+      <aside
+        className={`fixed top-0 left-0 h-full w-72 max-w-[85vw] bg-white shadow-2xl z-[100] flex flex-col justify-between p-5 transition-transform duration-200 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div>
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between pb-5 border-b border-border mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-full bg-primary text-white font-bold text-[16px] flex items-center justify-center shadow-inner">
+                A
               </div>
               <div>
-                <p className="text-[26px] font-bold text-foreground leading-tight">
-                  {stat.value.toLocaleString()}
-                </p>
-                <p className="text-[14px] text-muted-foreground">{stat.label}</p>
+                <h3 className="font-bold text-[14px] text-foreground leading-tight">
+                  Admin
+                </h3>
+                <span className="text-[11px] text-gray-500 font-medium">
+                  Administrator
+                </span>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setActiveTab('pending')}
-            className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
-              activeTab === 'pending'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-white border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Pending approval ({pendingHosts.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('approved')}
-            className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
-              activeTab === 'approved'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-white border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Active hosts ({approvedHosts.length})
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-muted-foreground"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search hosts by name, property, or location"
-            className="w-full pl-11 pr-4 py-3 rounded-xl border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 bg-white focus:outline-none focus:border-primary transition-colors"
-          />
-        </div>
-
-        {/* Pending hosts list */}
-        {activeTab === 'pending' && (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
-            {filteredPending.length === 0 ? (
-              <div className="py-16 text-center text-muted-foreground text-[15px]">
-                No pending host applications.
-              </div>
-            ) : (
-              filteredPending.map((host, index) => (
-                <div
-                  key={host.id}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 ${
-                    index !== filteredPending.length - 1 ? 'border-b border-border' : ''
+          {/* Sidebar Navigation Items */}
+          <nav className="space-y-1">
+            {sidebarLinks.map((item) => {
+              const isActive = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(item.key);
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary text-white font-semibold shadow-sm'
+                      : 'text-foreground hover:bg-gray-100/80'
                   }`}
                 >
-                  <div>
-                    <p className="text-[16px] font-semibold text-foreground">{host.name}</p>
-                    <p className="text-[14px] text-muted-foreground">{host.email}</p>
-                    <p className="text-[14px] text-foreground mt-1.5">
-                      {host.property} · {host.location}
-                    </p>
-                    <p className="text-[13px] text-muted-foreground mt-0.5">
-                      Submitted {host.submitted}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => rejectHost(host.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-foreground text-[14px] font-medium hover:bg-gray-50 transition-colors"
+                  <span>{item.label}</span>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                      }`}
                     >
-                      <X size={16} />
-                      Reject
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => approveHost(host.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:opacity-90 text-primary-foreground text-[14px] font-semibold transition-opacity"
-                    >
-                      <Check size={16} />
-                      Approve
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-        {/* Approved hosts list */}
-        {activeTab === 'approved' && (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
-            {filteredApproved.length === 0 ? (
-              <div className="py-16 text-center text-muted-foreground text-[15px]">
-                No active hosts found.
-              </div>
-            ) : (
-              filteredApproved.map((host, index) => (
-                <div
-                  key={host.id}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 ${
-                    index !== filteredApproved.length - 1 ? 'border-b border-border' : ''
-                  }`}
-                >
-                  <div>
-                    <p className="text-[16px] font-semibold text-foreground">{host.name}</p>
-                    <p className="text-[14px] text-muted-foreground">{host.email}</p>
-                    <p className="text-[14px] text-foreground mt-1.5">
-                      {host.property} · {host.location}
-                    </p>
-                    <p className="text-[13px] text-muted-foreground mt-0.5">
-                      Approved {host.approved}
-                    </p>
+        {/* Logout bottom section */}
+        <div className="pt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSidebarOpen(false);
+              logout();
+              navigate('/');
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <LogOut size={16} />
+            Log out
+          </button>
+        </div>
+      </aside>
+
+      {/* Backdrop - blurred dim only needed on small screens where content can't shift; click to close */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-xs transition-opacity md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      {/* Transparent click-catcher on md+ screens, since content just shifts over instead of dimming */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[90] hidden md:block"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Content wrapper - shifts right when sidebar is open on md+ screens, matching Host_dashboard */}
+      <div className={`flex-1 transition-all duration-200 ${isSidebarOpen ? 'md:ml-72' : ''}`}>
+        {/* Top beige-toned Header matching screens */}
+        <header className="fixed top-16 left-0 right-0 h-14 bg-[#FAF6F0] border-b border-gray-200/60 z-30 px-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-1 rounded-lg hover:bg-gray-200/50 transition-colors text-gray-800"
+          >
+            <Menu size={22} />
+          </button>
+          <h1 className="text-[17px] font-bold text-gray-800 tracking-tight">
+            {getPageTitle()}
+          </h1>
+        </header>
+
+        {/* Main scrollable body */}
+        <main className="max-w-[800px] w-full mx-auto px-4 pt-32 flex-1 pb-12">
+          {activeTab === 'listings' && (
+            <div className="space-y-4">
+              {listings.map((list) => (
+                <div key={list.id} className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs relative">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
+                        {list.title}
+                      </h3>
+                      <p className="text-[13px] text-gray-400 mt-0.5">
+                        Host: {list.host}
+                      </p>
+                    </div>
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                      list.status === 'Pending'
+                        ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                        : list.status === 'Approved'
+                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        : 'bg-rose-50 text-rose-600 border border-rose-100'
+                    }`}>
+                      {list.status}
+                    </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => removeHost(host.id)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-200 text-red-600 text-[14px] font-medium hover:bg-red-50 transition-colors flex-shrink-0"
-                  >
-                    <Trash2 size={16} />
-                    Remove
-                  </button>
+                  {/* Beige square file placeholders */}
+                  <div className="flex gap-2.5 my-3.5">
+                    {Array.from({ length: list.filesCount }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-12 h-12 rounded-xl bg-[#F5ECE2] flex items-center justify-center text-amber-900/60"
+                      >
+                        <FileText size={18} />
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-[11px] text-gray-400 font-medium">
+                    {list.filesCount} file{list.filesCount > 1 ? 's' : ''} submitted · {list.submitted}
+                  </p>
+
+                  {/* Reject / Approve action buttons for Pending */}
+                  {list.status === 'Pending' && (
+                    <div className="flex gap-3 mt-4 pt-2.5 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => handleRejectListing(list.id)}
+                        className="flex-1 py-2.5 rounded-xl border border-primary text-primary font-bold text-[13px] hover:bg-red-50/50 transition-colors"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApproveListing(list.id)}
+                        className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-[13px] hover:bg-primary-dark transition-colors"
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'payments' && (
+            <div className="space-y-4">
+              {payments.length === 0 ? (
+                <div className="py-16 text-center text-gray-400 text-[14px]">
+                  No pending payments to verify.
+                </div>
+              ) : (
+                payments.map((p) => (
+                  <div key={p.id} className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
+                          {p.title}
+                        </h3>
+                        <p className="text-[12px] text-gray-400 mt-0.5">
+                          {p.guest} &gt; {p.host}
+                        </p>
+                      </div>
+                      <span className="text-[15px] font-extrabold text-gray-900">
+                        ETB {p.amount.toFixed(2)}
+                      </span>
+                    </div>
+
+
+                    {/* SLA Warning */}
+                    {p.slaWarning && (
+                      <div className="flex items-center gap-1.5 text-red-600 text-[11px] font-semibold">
+                        <AlertCircle size={14} />
+                        {p.slaWarning}
+                      </div>
+                    )}
+
+                    {/* Verification Input & Action */}
+                    <div className="space-y-2 mt-2">
+                      <input
+                        type="text"
+                        placeholder="Transaction / reference code"
+                        value={p.refCode}
+                        onChange={(e) => setPayments(prev =>
+                          prev.map(item => item.id === p.id ? { ...item, refCode: e.target.value } : item)
+                        )}
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmPayment(p.id)}
+                        disabled={!p.refCode.trim()}
+                        className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-colors ${
+                          p.refCode.trim()
+                            ? 'bg-primary hover:bg-[#c82333]'
+                            : 'bg-primary/40 cursor-not-allowed'
+                        }`}
+                      >
+                        Confirm payment
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'payouts' && (
+            <div className="space-y-4">
+              {payouts.length === 0 ? (
+                <div className="py-16 text-center text-gray-400 text-[14px]">
+                  No pending payouts due.
+                </div>
+              ) : (
+                payouts.map((p) => (
+                  <div key={p.id} className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
+                          Host: {p.host}
+                        </h3>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Booking total ETB {p.total.toFixed(2)} · Commission {p.commissionPercent}% (ETB {p.commissionAmount.toFixed(2)})
+                        </p>
+                      </div>
+                      <span className="text-[15px] font-extrabold text-gray-900">
+                        ETB {p.amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* SLA Indicator */}
+                    <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${
+                      p.isWarning ? 'text-red-600' : 'text-gray-500'
+                    }`}>
+                      {p.isWarning ? <AlertCircle size={14} /> : <Clock size={14} />}
+                      {p.slaText}
+                    </div>
+
+                    {/* Verification Input & Action */}
+                    <div className="space-y-2 mt-2">
+                      <input
+                        type="text"
+                        placeholder="Transaction / reference code"
+                        value={p.refCode}
+                        onChange={(e) => setPayouts(prev =>
+                          prev.map(item => item.id === p.id ? { ...item, refCode: e.target.value } : item)
+                        )}
+                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleMarkPaid(p.id)}
+                        disabled={!p.refCode.trim()}
+                        className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-colors ${
+                          p.refCode.trim()
+                            ? 'bg-primary hover:bg-[#c82333]'
+                            : 'bg-primary/40 cursor-not-allowed'
+                        }`}
+                      >
+                        Mark paid
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'transactions' && (
+            <div className="space-y-3">
+              {transactions.map((tx) => (
+                <div key={tx.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                      tx.type === 'Payout'
+                        ? 'bg-rose-50 text-rose-600'
+                        : 'bg-emerald-50 text-emerald-600'
+                    }`}>
+                      {tx.type === 'Payout' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+                    </div>
+                    <div>
+                      <h4 className="text-[13.5px] font-bold text-gray-900 leading-tight">
+                        {tx.type === 'Payout' ? `Payout to ${tx.recipient}` : `Payment from ${tx.sender}`}
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Code: {tx.code}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {tx.timestamp}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-[15px] font-extrabold ${
+                    tx.type === 'Payout' ? 'text-gray-900' : 'text-gray-900'
+                  }`}>
+                    ETB {tx.amount.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'profile' && (
+            <Profile userName="Admin" userEmail="admin@ethioairbnb.com" embedded />
+          )}
+        </main>
+      </div>
     </div>
   );
 };
