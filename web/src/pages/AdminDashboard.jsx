@@ -1,22 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check,
   X,
   Menu,
   FileText,
-  Search,
   ArrowUpRight,
   ArrowDownLeft,
   LogOut,
-  LayoutGrid,
-  User,
-  ShieldCheck,
-  CheckCircle2,
   AlertCircle,
   Clock,
-  Settings,
+  Wallet,
+  Users,
+  Building2,
+  CalendarCheck,
+  Hourglass,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 import NavBar1 from '../components/NavBar1';
 import { useAuth } from '../context/AuthContext';
 import Profile from './Profile';
@@ -26,11 +36,53 @@ const A = "#E8473F";
 const A_DARK = "#C73B34";
 const A_LITE = "#fdf2f2";
 
+// Property-status donut colors
+const STATUS_COLORS = {
+  Approved: '#10b981',
+  Pending: '#f59e0b',
+  Rejected: A,
+};
+
+function OverviewCard({ label, value, helper, icon: Icon, tone = 'primary', changeLabel, changePositive }) {
+  const iconWrapClass =
+    tone === 'warning'
+      ? 'bg-amber-50 text-amber-600'
+      : 'bg-primary/10 text-primary';
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+      <div className="flex items-start justify-between">
+        <p className="text-[12px] font-semibold text-gray-500">{label}</p>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconWrapClass}`}>
+          <Icon size={17} strokeWidth={2} />
+        </div>
+      </div>
+      <div className="mt-3 flex items-baseline gap-2">
+        <p className="text-[26px] font-extrabold leading-none text-gray-900">{value}</p>
+        {changeLabel && (
+          <span
+            className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+              changePositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+            }`}
+          >
+            {changeLabel}
+          </span>
+        )}
+      </div>
+      {helper && (
+        <p className={`mt-1.5 text-[11px] font-medium ${tone === 'warning' ? 'text-amber-600' : 'text-gray-400'}`}>
+          {helper}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   
-  const [activeTab, setActiveTab] = useState('listings'); // 'listings', 'payments', 'payouts', 'transactions', 'profile'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'listings', 'payments', 'payouts', 'transactions', 'profile'
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 1. Listings Approval State
@@ -221,7 +273,62 @@ const AdminDashboard = () => {
   const pendingPaymentsCount = payments.length;
   const pendingPayoutsCount = payouts.length;
 
+  // --- Overview metrics ---
+
+  // Total Users — derived from every distinct host/guest name that appears
+  // across the mock listings, payments, payouts and transaction log, since
+  // there's no separate users table yet.
+  const totalUsersCount = useMemo(() => {
+    const names = new Set();
+    listings.forEach(l => l.host && names.add(l.host));
+    payments.forEach(p => { p.host && names.add(p.host); p.guest && names.add(p.guest); });
+    payouts.forEach(p => p.host && names.add(p.host));
+    transactions.forEach(t => { t.recipient && names.add(t.recipient); t.sender && names.add(t.sender); });
+    return names.size;
+  }, [listings, payments, payouts, transactions]);
+
+  // Total Revenue — sum of everything logged in the transaction log
+  const paymentsVolume = useMemo(
+    () => transactions.filter(t => t.type === 'Payment').reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
+  const payoutsVolume = useMemo(
+    () => transactions.filter(t => t.type === 'Payout').reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
+  const totalTransactionVolume = paymentsVolume + payoutsVolume;
+
+  // Total Bookings — monthly mock series backs both the "Booking Overview"
+  // bar chart and the Total Bookings stat card, so the two stay consistent.
+  const bookingsByMonth = [
+    { month: 'Jan', bookings: 8 },
+    { month: 'Feb', bookings: 12 },
+    { month: 'Mar', bookings: 9 },
+    { month: 'Apr', bookings: 15 },
+    { month: 'May', bookings: 20 },
+    { month: 'Jun', bookings: 18 },
+  ];
+  const totalBookingsCount = bookingsByMonth.reduce((sum, m) => sum + m.bookings, 0);
+  const lastMonthBookings = bookingsByMonth[bookingsByMonth.length - 1].bookings;
+  const prevMonthBookings = bookingsByMonth[bookingsByMonth.length - 2].bookings;
+  const bookingsChangePct = prevMonthBookings
+    ? Math.round(((lastMonthBookings - prevMonthBookings) / prevMonthBookings) * 100)
+    : null;
+
+  // Property Status — live counts from the listings state, so it updates
+  // as listings get approved/rejected from the Listings tab.
+  const approvedListingsCount = listings.filter(l => l.status === 'Approved').length;
+  const rejectedListingsCount = listings.filter(l => l.status === 'Rejected').length;
+  const totalListingsCount = listings.length;
+
+  const propertyStatusData = [
+    { name: 'Approved', value: approvedListingsCount },
+    { name: 'Pending', value: pendingListingsCount },
+    { name: 'Rejected', value: rejectedListingsCount },
+  ];
+
   const sidebarLinks = [
+    { label: 'Overview', key: 'overview' },
     { label: 'Listings approval', key: 'listings', badge: pendingListingsCount },
     { label: 'Payments verification', key: 'payments', badge: pendingPaymentsCount },
     { label: 'Payouts due', key: 'payouts', badge: pendingPayoutsCount },
@@ -231,6 +338,8 @@ const AdminDashboard = () => {
 
   const getPageTitle = () => {
     switch (activeTab) {
+      case 'overview':
+        return 'Overview';
       case 'listings':
         return 'Listings approval';
       case 'payments':
@@ -357,7 +466,7 @@ const AdminDashboard = () => {
       {/* Content wrapper - shifts right when sidebar is open on md+ screens, matching Host_dashboard */}
       <div className={`flex-1 transition-all duration-200 ${isSidebarOpen ? 'md:ml-72' : ''}`}>
         {/* Top beige-toned Header matching screens */}
-        <header className="fixed top-16 left-0 right-0 h-14 bg-[#FAF6F0] border-b border-gray-200/60 z-30 px-4 flex items-center gap-3">
+        <header className={`fixed top-16 left-0 right-0 h-14 bg-[#FAF6F0] border-b border-gray-200/60 z-30 px-4 flex items-center gap-3 transition-all duration-200 ${isSidebarOpen ? 'md:left-72' : ''}`}>
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
@@ -371,7 +480,132 @@ const AdminDashboard = () => {
         </header>
 
         {/* Main scrollable body */}
-        <main className="max-w-[800px] w-full mx-auto px-4 pt-32 flex-1 pb-12">
+        <main className={`w-full mx-auto px-4 pt-32 flex-1 pb-12 ${activeTab === 'overview' ? 'max-w-[1120px]' : 'max-w-[800px]'}`}>
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Top statistic cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                <OverviewCard
+                  label="Total Users"
+                  value={totalUsersCount}
+                  helper="Unique hosts & guests"
+                  icon={Users}
+                />
+                <OverviewCard
+                  label="Total Properties"
+                  value={totalListingsCount}
+                  helper="Listed on the platform"
+                  icon={Building2}
+                />
+                <OverviewCard
+                  label="Total Bookings"
+                  value={totalBookingsCount}
+                  helper="Jan – Jun 2026"
+                  icon={CalendarCheck}
+                  changeLabel={bookingsChangePct !== null ? `${bookingsChangePct >= 0 ? '+' : ''}${bookingsChangePct}%` : null}
+                  changePositive={bookingsChangePct >= 0}
+                />
+                <OverviewCard
+                  label="Total Revenue"
+                  value={`ETB ${totalTransactionVolume.toLocaleString()}`}
+                  helper="From all bookings"
+                  icon={Wallet}
+                />
+                <OverviewCard
+                  label="Pending Approvals"
+                  value={pendingListingsCount}
+                  helper="Needs review"
+                  icon={Hourglass}
+                  tone="warning"
+                />
+              </div>
+
+              {/* Charts — side by side on desktop, stacked on mobile */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Booking Overview bar chart */}
+                <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                  <h3 className="text-[14px] font-bold text-gray-900 mb-1">Booking Overview</h3>
+                  <p className="text-[11px] text-gray-400 mb-4">Bookings per month</p>
+                  <div style={{ width: '100%', height: 240 }}>
+                    <ResponsiveContainer>
+                      <BarChart data={bookingsByMonth} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: A_LITE }}
+                          contentStyle={{ borderRadius: 12, border: '1px solid #eee', fontSize: 12 }}
+                          formatter={(value) => [`${value} bookings`, '']}
+                        />
+                        <Bar dataKey="bookings" fill={A} radius={[8, 8, 0, 0]} maxBarSize={44} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Property Status donut chart */}
+                <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
+                  <h3 className="text-[14px] font-bold text-gray-900 mb-1">Property Status</h3>
+                  <p className="text-[11px] text-gray-400 mb-4">Approval status across all listings</p>
+
+                  {totalListingsCount === 0 ? (
+                    <div className="py-10 text-center text-gray-400 text-[13px]">
+                      No properties listed yet.
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ width: '100%', height: 200 }}>
+                        <ResponsiveContainer>
+                          <PieChart>
+                            <Pie
+                              data={propertyStatusData}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={55}
+                              outerRadius={80}
+                              paddingAngle={3}
+                            >
+                              {propertyStatusData.map((entry) => (
+                                <Cell key={entry.name} fill={STATUS_COLORS[entry.name]} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              formatter={(value, name) => [`${value} properties`, name]}
+                              contentStyle={{ borderRadius: 12, border: '1px solid #eee', fontSize: 12 }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Custom legend: status, count, percentage */}
+                      <div className="mt-2 space-y-2">
+                        {propertyStatusData.map((entry) => {
+                          const pct = totalListingsCount
+                            ? Math.round((entry.value / totalListingsCount) * 100)
+                            : 0;
+                          return (
+                            <div key={entry.name} className="flex items-center justify-between text-[13px]">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: STATUS_COLORS[entry.name] }}
+                                />
+                                <span className="text-gray-700 font-medium">{entry.name}</span>
+                              </div>
+                              <span className="text-gray-500">
+                                {entry.value} <span className="text-gray-400">({pct}%)</span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'listings' && (
             <div className="space-y-4">
               {listings.map((list) => (
