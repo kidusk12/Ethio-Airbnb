@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../widgets/contact_form_dialog.dart';
 
 /// Single-page Help Center with FAQs and support contacts.
 class HelpSupportPage extends StatelessWidget {
@@ -28,49 +29,57 @@ class HelpSupportPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Contact Banner Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(16),
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => showDialog(
+                context: context,
+                builder: (context) => const ContactFormDialog(),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.headset_mic_outlined,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.headset_mic_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '24/7 Support Team',
-                          style: AppTextStyles.titleMedium.copyWith(
-                            color: AppColors.primaryDark,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '24/7 Support Team',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'support@ethiostays.com',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textPrimary,
+                          const SizedBox(height: 2),
+                          Text(
+                            'Tap to send us a message',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    Icon(Icons.chevron_right, color: AppColors.primaryDark),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -109,10 +118,7 @@ class _FaqTile extends StatelessWidget {
   final String question;
   final String answer;
 
-  const _FaqTile({
-    required this.question,
-    required this.answer,
-  });
+  const _FaqTile({required this.question, required this.answer});
 
   @override
   Widget build(BuildContext context) {
@@ -131,12 +137,7 @@ class _FaqTile extends StatelessWidget {
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            answer,
-            style: AppTextStyles.bodyMedium,
-          ),
-        ],
+        children: [Text(answer, style: AppTextStyles.bodyMedium)],
       ),
     );
   }
