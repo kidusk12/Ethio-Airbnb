@@ -5,8 +5,16 @@ export function toListingSummaryDto(listing) {
     category: listing.category,
     city: listing.city,
     subCity: listing.sub_city,
+    location: `${listing.sub_city}, ${listing.city}`,
     pricePerNight: Number(listing.price_per_night),
     coverPhoto: listing.photos?.[0] ?? null,
+    photos: listing.photos ?? [],
+    amenities: listing.amenities ?? [],
+    bedrooms: listing.bedrooms,
+    bathrooms: listing.bathrooms,
+    maxGuests: listing.max_guests,
+    averageRating: Number(listing.average_rating ?? 0),
+    reviewCount: Number(listing.review_count ?? 0),
     hostId: listing.host_id,
   };
 }

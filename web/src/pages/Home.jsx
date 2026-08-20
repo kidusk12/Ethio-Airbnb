@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Home as HomeIcon,
   ChevronRight,
-  Heart,
   Star,
   Check,
   Building,
@@ -12,6 +11,7 @@ import {
   Key,
   Compass,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import heroImg from '../assets/hero.jpg';
 import aaImg from '../assets/AA.jpg';
@@ -23,11 +23,29 @@ import Navbar from '../components/NavBar';
 import Footer from '../components/Footer';
 import Search from '../components/Search';
 import { useAuth } from '../context/AuthContext';
+import { getPublicListings } from '../lib/api';
+
+const CATEGORY_LABELS = {
+  apartment: 'Apartment', villa: 'Villa', hotel: 'Hotel',
+  guesthouse: 'Guesthouse', private_room: 'Private room', unique_stay: 'Unique stay',
+};
 
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [favorites, setFavorites] = useState({});
+
+  // Live listings for "Handpicked places" section
+  const [featuredListings, setFeaturedListings] = useState([]);
+  const [listingsLoading, setListingsLoading]   = useState(true);
+
+  useEffect(() => {
+    getPublicListings({ limit: 6 })
+      .then(({ status, body }) => {
+        if (status === 200) setFeaturedListings(body.data?.listings ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setListingsLoading(false));
+  }, []);
 
   const destinations = [
     { name: 'Addis Ababa', stays: 312, image: aaImg },
@@ -35,69 +53,6 @@ const Home = () => {
     { name: 'Bahir Dar', stays: 96, image: bahirImg },
     { name: 'Lalibela', stays: 74, image: lalibelaImg },
     { name: 'Dire Dawa', stays: 58, image: direImg },
-  ];
-
-  const properties = [
-    {
-      slug: 'bole-skyline-suite',
-      name: 'Bole Skyline Suite',
-      type: 'Apartment',
-      rating: 4.92,
-      reviews: 168,
-      location: 'Bole, Addis Ababa',
-      price: 4800,
-      image: aaImg,
-    },
-    {
-      slug: 'hawassa-lake-villa',
-      name: 'Hawassa Lake Villa',
-      type: 'Villa',
-      rating: 4.87,
-      reviews: 94,
-      location: 'Lake Hawassa, Hawassa',
-      price: 9200,
-      image: hawaImg,
-    },
-    {
-      slug: 'lalibela-stone-guesthouse',
-      name: 'Lalibela Stone Guesthouse',
-      type: 'Guesthouse',
-      rating: 4.95,
-      reviews: 212,
-      location: 'Old Town, Lalibela',
-      price: 3400,
-      image: lalibelaImg,
-    },
-    {
-      slug: 'bahir-dar-garden-house',
-      name: 'Bahir Dar Garden House',
-      type: 'Hotel',
-      rating: 4.78,
-      reviews: 141,
-      location: 'Tana Lakeside, Bahir Dar',
-      price: 5600,
-      image: bahirImg,
-    },
-    {
-      slug: 'kazanchis-loft',
-      name: 'Kazanchis Design Loft',
-      type: 'Private room',
-      rating: 4.71,
-      reviews: 63,
-      location: 'Kazanchis, Addis Ababa',
-      price: 2200,
-      image: aaImg,
-    },
-    {
-      slug: 'dire-dawa-courtyard',
-      name: 'Dire Dawa Courtyard Stay',
-      type: 'Unique stay',
-      rating: 4.83,
-      reviews: 77,
-      location: 'Kezira, Dire Dawa',
-      price: 3900,
-      image: direImg,
-    },
   ];
 
   const propertyTypes = [
@@ -109,17 +64,11 @@ const Home = () => {
     { label: 'Unique stays', icon: Sparkles, desc: 'Eco lodges & traditional' },
   ];
 
-  const toggleFavorite = (slug, event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setFavorites((prev) => ({ ...prev, [slug]: !prev[slug] }));
-  };
-
   const handleStartHosting = () => {
     if (user) {
       navigate('/host/list');
     } else {
-      navigate('/login', { state: { from: '/host' } });
+      navigate('/login', { state: { from: '/host/list' } });
     }
   };
 
@@ -255,42 +204,67 @@ const Home = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
-          {properties.map((property) => (
-            <Link
-              key={property.slug}
-              to={`/property/${property.slug}`}
-              className="group block"
-            >
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 shadow-sm bg-stone-100">
-                <img
-                  src={property.image}
-                  alt={`${property.name} in ${property.location}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-foreground">
-                  {property.type}
-                </div>
-              </div>
+        {listingsLoading ? (
+          <div className="flex items-center justify-center h-48 gap-3 text-muted-foreground">
+            <Loader2 size={24} className="animate-spin text-primary" />
+            <span>Loading stays…</span>
+          </div>
+        ) : featuredListings.length === 0 ? (
+          <div className="flex items-center justify-center h-48 text-muted-foreground">
+            No approved listings yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+            {featuredListings.map((listing) => {
+              const coverPhoto = listing.coverPhoto || listing.photos?.[0] || null;
+              const label = CATEGORY_LABELS[listing.category] ?? listing.category;
+              const rating = listing.averageRating ?? 0;
+              const reviewCount = listing.reviewCount ?? 0;
+              return (
+                <Link
+                  key={listing.id}
+                  to={`/property/${listing.id}`}
+                  className="group block"
+                >
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 shadow-sm bg-stone-100">
+                    {coverPhoto ? (
+                      <img
+                        src={coverPhoto}
+                        alt={listing.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                        No photo
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-foreground">
+                      {label}
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="text-[16px] font-bold text-foreground group-hover:text-primary transition-colors">
-                  {property.name}
-                </h3>
-                <div className="flex items-center gap-1">
-                  <Star size={14} className="fill-primary text-primary" />
-                  <span className="text-[14px] font-semibold">{property.rating}</span>
-                </div>
-              </div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <h3 className="text-[16px] font-bold text-foreground group-hover:text-primary transition-colors">
+                      {listing.title}
+                    </h3>
+                    {rating > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star size={14} className="fill-primary text-primary" />
+                        <span className="text-[14px] font-semibold">{rating.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
 
-              <p className="text-[14px] text-muted-foreground mb-1.5">{property.location}</p>
-              <p className="text-[15px] font-bold text-foreground">
-                ETB {property.price.toLocaleString()}
-                <span className="font-normal text-muted-foreground text-[13px]"> / night</span>
-              </p>
-            </Link>
-          ))}
-        </div>
+                  <p className="text-[14px] text-muted-foreground mb-1.5">{listing.location}</p>
+                  <p className="text-[15px] font-bold text-foreground">
+                    ETB {listing.pricePerNight.toLocaleString()}
+                    <span className="font-normal text-muted-foreground text-[13px]"> / night</span>
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Become a Host Banner */}

@@ -16,6 +16,7 @@ import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
@@ -24,26 +25,94 @@ function App() {
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
+          {/* Public routes */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/stays" element={<Explore />} />
-          <Route path="/property/:slug" element={<PropertyDetail />} />
+          <Route path="/property/:id" element={<PropertyDetail />} />
           <Route path="/property" element={<PropertyDetail />} />
-          <Route path="/book/:slug" element={<Book />} />
-          <Route path="/book" element={<Book />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/host" element={<Host />} />
-          <Route path="/host/list" element={<List />} />
-          <Route path="/host/Host_dashboard" element={<Host_dashboard />} />
-          <Route path="/host/dashboard" element={<Host_dashboard />} />
-          <Route path="/guest_dashboard" element={<UserDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/about" element={<About />} />
           <Route path="/help" element={<Help />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Host landing page — public, converts visitors */}
+          <Route path="/host" element={<Host />} />
+
+          {/* Protected: any authenticated user */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected: booking — requires login (guest role enforced by backend) */}
+          <Route
+            path="/book/:id"
+            element={
+              <ProtectedRoute allowedRoles={["guest"]}>
+                <Book />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/book"
+            element={
+              <ProtectedRoute allowedRoles={["guest"]}>
+                <Book />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected: host-only routes */}
+          <Route
+            path="/host/list"
+            element={
+              <ProtectedRoute allowedRoles={["host"]}>
+                <List />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/host/Host_dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["host"]}>
+                <Host_dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/host/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["host"]}>
+                <Host_dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected: guest dashboard */}
+          <Route
+            path="/guest_dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["guest"]}>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected: admin only */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

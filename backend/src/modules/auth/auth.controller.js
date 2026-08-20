@@ -82,3 +82,13 @@ export async function verifyHostIdentity(req, res, next) {
     return next(error);
   }
 }
+
+export async function logout(req, res, next) {
+  try {
+    // JWT is stateless — nothing to invalidate server-side.
+    // This endpoint exists as a courtesy hook for audit/logging.
+    return success(res, { message: 'Logged out successfully.' });
+  } catch (error) {
+    return next(error);
+  }
+}

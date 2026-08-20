@@ -124,12 +124,14 @@ export async function softDeleteListingAsAdmin(listingId) {
 export async function getDashboardStats() {
   const { rows } = await pool.query(`
     SELECT
-      COUNT(*) AS total_listings,
-      COUNT(CASE WHEN status = 'approved' THEN 1 END) AS approved_listings,
-      COUNT(CASE WHEN status = 'rejected' THEN 1 END) AS rejected_listings,
-      COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending_listings
-    FROM listings
-    WHERE active = true
+      (SELECT COUNT(*)::int FROM users WHERE deleted_at IS NULL) AS total_users,
+      (SELECT COUNT(*)::int FROM listings WHERE active = true) AS total_listings,
+      (SELECT COUNT(*)::int FROM listings WHERE active = true AND status = 'approved') AS approved_listings,
+      (SELECT COUNT(*)::int FROM listings WHERE active = true AND status = 'rejected') AS rejected_listings,
+      (SELECT COUNT(*)::int FROM listings WHERE active = true AND status = 'pending') AS pending_listings,
+      (SELECT COUNT(*)::int FROM bookings) AS total_bookings,
+      (SELECT COUNT(*)::int FROM bookings WHERE status = 'confirmed') AS confirmed_bookings,
+      (SELECT COALESCE(SUM(amount), 0)::numeric FROM transactions WHERE type = 'userPayment') AS total_revenue
   `);
 
   return rows[0] ?? null;

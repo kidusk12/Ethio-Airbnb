@@ -71,7 +71,7 @@ export async function createUser({
     `,
     [
       firstName,
-      middleName || null,
+      middleName,
       lastName,
       phoneNumber,
       email,

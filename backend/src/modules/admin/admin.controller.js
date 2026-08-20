@@ -78,8 +78,20 @@ export async function deleteListing(req, res, next) {
 
 export async function getStats(req, res, next) {
   try {
-    const stats = await adminService.getStats();
-    return success(res, { data: stats });
+    const raw = await adminService.getStats();
+
+    return success(res, {
+      data: {
+        totalUsers: Number(raw.total_users),
+        totalListings: Number(raw.total_listings),
+        approvedListings: Number(raw.approved_listings),
+        rejectedListings: Number(raw.rejected_listings),
+        pendingListings: Number(raw.pending_listings),
+        totalBookings: Number(raw.total_bookings),
+        confirmedBookings: Number(raw.confirmed_bookings),
+        totalRevenue: Number(raw.total_revenue),
+      },
+    });
   } catch (error) {
     return next(error);
   }

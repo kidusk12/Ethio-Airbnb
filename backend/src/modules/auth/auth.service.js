@@ -107,7 +107,7 @@ export async function updateCurrentUser(userId, data) {
 
   if (data.firstName !== undefined) fields.first_name = data.firstName.trim();
   if (data.middleName !== undefined) {
-    fields.middle_name = data.middleName?.trim() || null;
+    fields.middle_name = data.middleName.trim();
   }
   if (data.lastName !== undefined) fields.last_name = data.lastName.trim();
   if (data.phoneNumber !== undefined) {

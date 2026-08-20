@@ -199,9 +199,14 @@ export async function findPublicListings({
 
   const listingsResult = await pool.query(
     `
-      SELECT ${listingColumns}
+      SELECT
+        l.*,
+        COALESCE(AVG(r.rating), 0) AS average_rating,
+        COUNT(r.id)::int AS review_count
       FROM listings l
+      LEFT JOIN reviews r ON r.listing_id = l.id
       WHERE ${whereClause}
+      GROUP BY l.id
       ORDER BY l.created_at DESC
       LIMIT $${values.length - 1}
       OFFSET $${values.length}
@@ -212,7 +217,7 @@ export async function findPublicListings({
   const countValues = values.slice(0, -2);
   const countResult = await pool.query(
     `
-      SELECT COUNT(*)::int AS count
+      SELECT COUNT(DISTINCT l.id)::int AS count
       FROM listings l
       WHERE ${whereClause}
     `,

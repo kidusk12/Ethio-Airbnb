@@ -7,12 +7,21 @@ const categories = [
   'unique_stay',
 ];
 
-const amenities = [
+/** The four normalized/standard amenity slugs. */
+const STANDARD_AMENITIES = new Set([
   'wifi',
   'kitchen',
   'free_parking',
   'washer',
-];
+]);
+
+/** Validates an amenities array: each item must be a non-empty string. */
+function validAmenitiesArray(value) {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => typeof item === 'string' && item.trim().length > 0)
+  );
+}
 
 function error(field, message) {
   return { field, message };
@@ -67,14 +76,11 @@ export function validateCreateListing(body) {
     errors.push(error('description', 'Description is required.'));
   }
 
-  if (
-    !Array.isArray(body.amenities) ||
-    !body.amenities.every((item) => amenities.includes(item))
-  ) {
+  if (!validAmenitiesArray(body.amenities)) {
     errors.push(
       error(
         'amenities',
-        'Amenities may only include wifi, kitchen, free_parking, or washer.',
+        'Amenities must be a list of non-empty text values.',
       ),
     );
   }
@@ -138,11 +144,8 @@ export function validateUpdateListing(body) {
   }
 
   if (body.amenities !== undefined) {
-    if (
-      !Array.isArray(body.amenities) ||
-      !body.amenities.every((item) => amenities.includes(item))
-    ) {
-      errors.push(error('amenities', 'One or more amenities are invalid.'));
+    if (!validAmenitiesArray(body.amenities)) {
+      errors.push(error('amenities', 'Amenities must be a list of non-empty text values.'));
     }
   }
 

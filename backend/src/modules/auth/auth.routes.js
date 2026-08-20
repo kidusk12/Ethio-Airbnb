@@ -27,6 +27,14 @@ authRouter.post(
   controller.login,
 );
 
+// Logout (courtesy endpoint — JWT is stateless; actual session cleanup
+// happens client-side, but this lets the server log the event).
+authRouter.post(
+  '/logout',
+  authenticate,
+  controller.logout,
+);
+
 // Logged-in user endpoints
 authRouter.get(
   '/me',

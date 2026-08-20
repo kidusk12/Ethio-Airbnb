@@ -1,4 +1,5 @@
 import ApiError from '../../utils/ApiError.js';
+import { HOST_COMMISSION_RATE } from '../../config/constants.js';
 import { findActiveUserById } from '../auth/auth.repository.js';
 import {
   expireAllStalePendingBookings,
@@ -15,10 +16,7 @@ import {
   rejectPaymentAtomic,
 } from './payment.repository.js';
 
-// Contract flags the commission rate as an unresolved product decision —
-// this mirrors the placeholder already hardcoded on the mobile app.
-// Change this one constant once a real rate is decided.
-const HOST_COMMISSION_RATE = 0.15;
+// Commission rate is centralized in src/config/constants.js
 
 function joinName(first, middle, last) {
   return [first, middle, last].filter(Boolean).join(' ');

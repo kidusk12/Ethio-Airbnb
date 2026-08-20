@@ -12,6 +12,10 @@ export function validateRegister(body) {
     errors.push(fieldError('firstName', 'First name is required.'));
   }
 
+  if (!body.middleName?.trim()) {
+    errors.push(fieldError('middleName', 'Middle name is required.'));
+  }
+
   if (!body.lastName?.trim()) {
     errors.push(fieldError('lastName', 'Last name is required.'));
   }
@@ -51,6 +55,10 @@ export function validateLogin(body) {
 
 export function validateUpdateProfile(body) {
   const errors = [];
+
+  if (body.middleName !== undefined && !body.middleName?.trim()) {
+    errors.push(fieldError('middleName', 'Middle name cannot be empty.'));
+  }
 
   if (body.email !== undefined && !emailPattern.test(body.email)) {
     errors.push(fieldError('email', 'Enter a valid email address.'));
