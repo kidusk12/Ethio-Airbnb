@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Search as SearchIcon, ChevronDown, ShieldCheck, CalendarClock, UserCog, Mail } from "lucide-react";
 import Navbar from "../components/NavBar";
 import Footer from "../components/Footer";
-import ContactModal from "../components/modals/ContactModal";
+import ContactModal from "../components/Modals/contactModal";
 
 const A = "#E8473F";
 
