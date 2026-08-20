@@ -14,7 +14,6 @@ import {
   X,
   Calendar as CalendarIcon,
   Clock,
-  ShieldCheck,
   Settings,
   LogOut,
   Trash2,
@@ -148,470 +147,399 @@ function Host_dashboard() {
   const tabs = [
     { label: 'Overview', icon: Home },
     { label: 'Listings', icon: ListIcon },
-    { label: 'Calendar', icon: CalendarIcon },
-    { label: 'Earnings', icon: Banknote },
     { label: 'Reviews', icon: MessageSquare },
   ];
 
   const sidebarLinks = [
-    { label: 'Dashboard Overview', icon: Home, tab: 'Overview' },
+    { label: 'Overview', icon: Home, tab: 'Overview' },
     { label: 'My Listings', icon: ListIcon, tab: 'Listings', count: listings.length },
-    { label: 'Calendar & Bookings', icon: CalendarIcon, tab: 'Calendar' },
-    { label: 'Earnings & Payouts', icon: Banknote, tab: 'Earnings' },
-    { label: 'Guest Inquiries & Reviews', icon: MessageSquare, tab: 'Reviews' },
-    { label: 'Host Protection & Policies', icon: ShieldCheck, action: () => alert('EthioStays Host Guarantee covers up to ETB 500,000 in property protection.') },
-    { label: 'Profile & Account Settings', icon: Settings, action: () => navigate('/admin/profile') },
+    { label: 'Profile Settings', icon: Settings, action: () => navigate('/profile') },
   ];
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
       <NavBar1 />
 
-      {/* Top Bar with Sidebar Icon Toggle & Add Property */}
-      <div className="pt-20 pb-2 px-6 max-w-[1440px] mx-auto flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setIsSidebarOpen(true)}
-          title="Open menu"
-          className="w-10 h-10 rounded-2xl bg-white border border-border hover:border-primary text-foreground flex items-center justify-center shadow-sm hover:shadow transition-all group"
-        >
-          <PanelLeft size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-        </button>
-
-        <button
-          type="button"
-          onClick={goToNewProperty}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-[#c82333] px-5 py-2.5 text-[14px] font-bold text-white shadow-sm transition-all"
-        >
-          <Plus size={18} />
-          Add property
-        </button>
-      </div>
-
-      {/* Sliding Sidebar Drawer */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-[100] flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-
-          {/* Drawer Content with smaller, refined text */}
-          <aside className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 animate-in slide-in-from-left duration-200">
-            <div>
-              {/* Sidebar Header */}
-              <div className="flex items-center justify-between pb-5 border-b border-border mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-primary text-white font-bold text-[15px] flex items-center justify-center shadow-sm">
-                    {initialLetter}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[14px] text-foreground leading-tight">
-                      {hostFirstName}
-                    </h3>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full mt-0.5">
-                      <CheckCircle2 size={10} /> Verified Host
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-muted-foreground"
-                >
-                  <X size={16} />
-                </button>
+      {/* Sliding Sidebar - fixed panel, pushes content instead of covering it */}
+      <aside
+        className={`fixed top-0 left-0 h-full w-72 max-w-[85vw] bg-white shadow-2xl z-[100] flex flex-col justify-between p-5 transition-transform duration-200 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div>
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between pb-5 border-b border-border mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-primary text-white font-bold text-[15px] flex items-center justify-center shadow-sm">
+                {initialLetter}
               </div>
+              <div>
+                <h3 className="font-bold text-[14px] text-foreground leading-tight">
+                  {hostFirstName}
+                </h3>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full mt-0.5">
+                  <CheckCircle2 size={10} /> Verified Host
+                </span>
+              </div>
+            </div>
 
-              {/* Sidebar Navigation */}
-              <nav className="space-y-1">
-                {sidebarLinks.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.tab;
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-muted-foreground"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        if (item.action) {
-                          item.action();
-                        } else if (item.tab) {
-                          setActiveTab(item.tab);
-                        }
-                        setIsSidebarOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
-                        isActive
-                          ? 'bg-primary text-white font-semibold shadow-sm'
-                          : 'text-foreground hover:bg-gray-100/80'
+          {/* Sidebar Navigation */}
+          <nav className="space-y-1">
+            {sidebarLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.tab;
+
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => {
+                    if (item.action) {
+                      item.action();
+                    } else if (item.tab) {
+                      setActiveTab(item.tab);
+                    }
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary text-white font-semibold shadow-sm'
+                      : 'text-foreground hover:bg-gray-100/80'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={16} className={isActive ? 'text-white' : 'text-primary flex-shrink-0'} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {item.count !== undefined && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Icon size={16} className={isActive ? 'text-white' : 'text-primary flex-shrink-0'} />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                      {item.count !== undefined && (
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
-                          }`}
-                        >
-                          {item.count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-
-            {/* Sidebar Bottom / Logout */}
-            <div className="pt-4 border-t border-border">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  logout();
-                  navigate('/');
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <LogOut size={16} />
-                Log out
-              </button>
-            </div>
-          </aside>
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
+
+        {/* Sidebar Bottom / Logout */}
+        <div className="pt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSidebarOpen(false);
+              logout();
+              navigate('/');
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <LogOut size={16} />
+            Log out
+          </button>
+        </div>
+      </aside>
+
+      {/* Backdrop - only needed on small screens where content can't shift; click to close */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-xs transition-opacity md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[90] hidden md:block"
+          onClick={() => setIsSidebarOpen(false)}
+        />
       )}
 
-      {/* Main Content Container */}
-      <main className="w-full px-6 py-6 md:px-10 max-w-[1440px] mx-auto">
-        {/* Welcome Banner - removed HOST PORTAL subtitle */}
-        <div className="mb-8">
-          <h1 className="font-serif text-[34px] md:text-[40px] font-bold leading-tight text-foreground">
-            Welcome back, {hostFirstName}!
-          </h1>
-          <p className="text-[14px] text-muted-foreground mt-1">
-            Here is what's happening with your properties across Ethiopia today.
-          </p>
+      {/* Content wrapper - shifts right when sidebar is open on md+ screens */}
+      <div className={`transition-all duration-200 ${isSidebarOpen ? 'md:ml-72' : ''}`}>
+        {/* Top Bar with Sidebar Icon Toggle & Add Property */}
+        <div className="pt-20 pb-2 px-6 max-w-[1440px] mx-auto flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            title="Open menu"
+            className="w-10 h-10 rounded-2xl bg-white border border-border hover:border-primary text-foreground flex items-center justify-center shadow-sm hover:shadow transition-all group"
+          >
+            <PanelLeft size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+          </button>
+
+          <button
+            type="button"
+            onClick={goToNewProperty}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-[#c82333] px-5 py-2.5 text-[14px] font-bold text-white shadow-sm transition-all"
+          >
+            <Plus size={18} />
+            Add property
+          </button>
         </div>
 
-        {/* Statistics Grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <StatCard
-            label="Total earnings"
-            value={`ETB ${totalEarnings.toLocaleString()}`}
-            helper="ETB payouts direct to CBE / Telebirr"
-            icon={WalletCards}
-          />
+        {/* Main Content Container */}
+        <main className="w-full px-6 py-6 md:px-10 max-w-[1440px] mx-auto">
+          {/* Welcome Banner */}
+          <div className="mb-8">
+            <h1 className="font-serif text-[34px] md:text-[40px] font-bold leading-tight text-foreground">
+              Welcome back, {hostFirstName}!
+            </h1>
+            <p className="text-[14px] text-muted-foreground mt-1">
+              Here is what's happening with your properties.
+            </p>
+          </div>
 
-          <StatCard
-            label="Active listings"
-            value={listings.length}
-            helper={`${listings.length} property listed`}
-            icon={Building2}
-          />
+          {/* Statistics Grid */}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+            <StatCard
+              label="Total earnings"
+              value={`ETB ${totalEarnings.toLocaleString()}`}
+              helper="ETB payouts direct to CBE / Telebirr"
+              icon={WalletCards}
+            />
 
-          <StatCard
-            label="Confirmed bookings"
-            value={bookings.length}
-            helper="2 guest arrivals upcoming"
-            icon={CalendarIcon}
-          />
+            <StatCard
+              label="Active listings"
+              value={listings.length}
+              helper={`${listings.length} property listed`}
+              icon={Building2}
+            />
 
-          <StatCard
-            label="Host rating score"
-            value={reviewScore.toFixed(2)}
-            helper="Based on guest reviews"
-            icon={Star}
-          />
-        </div>
+            <StatCard
+              label="Confirmed bookings"
+              value={bookings.length}
+              helper="2 guest arrivals upcoming"
+              icon={CalendarIcon}
+            />
 
-        {/* Navigation Tabs Bar */}
-        <div className="mb-8 inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-2xl bg-[#f4f1eb] p-1.5 border border-border/50">
-          {tabs.map(({ label, icon: Icon }) => {
-            const active = activeTab === label;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setActiveTab(label)}
-                className={`inline-flex items-center gap-2 rounded-xl px-5 py-2 text-[13px] font-bold transition-all ${
-                  active
-                    ? 'bg-white text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Icon size={15} />
-                {label}
-              </button>
-            );
-          })}
-        </div>
+            <StatCard
+              label="Host rating score"
+              value={reviewScore.toFixed(2)}
+              helper="Based on guest reviews"
+              icon={Star}
+            />
+          </div>
 
-        {/* TAB 1: OVERVIEW */}
-        {activeTab === 'Overview' && (
-          <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-            {/* Left: Listings Card */}
-            <section className="rounded-3xl border border-border bg-white p-7 shadow-sm">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="font-serif text-[24px] font-bold text-foreground">
-                    Your properties
-                  </h2>
-                  <p className="text-[13px] text-muted-foreground">Manage your current active places</p>
+          {/* Navigation Tabs Bar */}
+          <div className="mb-8 inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-2xl bg-[#f4f1eb] p-1.5 border border-border/50">
+            {tabs.map(({ label, icon: Icon }) => {
+              const active = activeTab === label;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setActiveTab(label)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-5 py-2 text-[13px] font-bold transition-all ${
+                    active
+                      ? 'bg-white text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon size={15} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === 'Overview' && (
+            <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+              {/* Left: Listings Card */}
+              <section className="rounded-3xl border border-border bg-white p-7 shadow-sm">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-serif text-[24px] font-bold text-foreground">
+                      Your properties
+                    </h2>
+                    <p className="text-[13px] text-muted-foreground">Manage your current active places</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('Listings')}
+                    className="inline-flex items-center gap-1 text-[13px] font-bold text-primary hover:underline"
+                  >
+                    View all <ArrowUpRight size={15} />
+                  </button>
                 </div>
+
+                <div className="divide-y divide-border">
+                  {listings.map((listing) => (
+                    <div key={listing.id} className="py-4 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                          <Building2 size={22} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-[15px] text-foreground truncate">
+                            {listing.title || listing.name}
+                          </p>
+                          <p className="text-[13px] text-muted-foreground truncate">
+                            {listing.location || `${listing.subCity}, ${listing.city}`} · {listing.type}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-[15px] text-foreground">
+                          ETB {Number(listing.price || listing.nightlyPrice || 0).toLocaleString()}
+                          <span className="text-[12px] font-normal text-muted-foreground">/nt</span>
+                        </p>
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[11px] font-bold">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Right: Upcoming Reservations */}
+              <section className="rounded-3xl border border-border bg-white p-7 shadow-sm">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-serif text-[24px] font-bold text-foreground">
+                      Recent reservations
+                    </h2>
+                    <p className="text-[13px] text-muted-foreground">Upcoming guest stays</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3.5">
+                  {bookings.map((booking) => (
+                    <div key={booking.id} className="p-4 rounded-2xl bg-gray-50/70 border border-border">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-bold text-[14px] text-foreground">{booking.guestName}</p>
+                        <span className="font-bold text-[14px] text-primary">
+                          ETB {booking.amount.toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-muted-foreground flex items-center gap-1.5">
+                        <Clock size={13} /> {booking.dates}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* TAB 2: LISTINGS */}
+          {activeTab === 'Listings' && (
+            <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
+              <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-serif text-[28px] font-bold text-foreground">
+                    My Properties ({listings.length})
+                  </h2>
+                  <p className="text-[14px] text-muted-foreground">
+                    Update your descriptions, nightly prices, and photos.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setActiveTab('Listings')}
-                  className="inline-flex items-center gap-1 text-[13px] font-bold text-primary hover:underline"
+                  onClick={goToNewProperty}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-[#c82333] px-5 py-3 text-[14px] font-bold text-white shadow-sm transition-all"
                 >
-                  View all <ArrowUpRight size={15} />
+                  <Plus size={18} />
+                  Add new place
                 </button>
               </div>
 
-              <div className="divide-y divide-border">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {listings.map((listing) => (
-                  <div key={listing.id} className="py-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                        <Building2 size={22} />
+                  <div key={listing.id} className="rounded-3xl border border-border overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
+                    {listing.image && (
+                      <div className="aspect-[16/9] w-full bg-gray-100 overflow-hidden relative">
+                        <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/95 text-[11px] font-bold uppercase tracking-wider text-foreground">
+                          {listing.type || 'Property'}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-[15px] text-foreground truncate">
-                          {listing.title || listing.name}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground truncate">
-                          {listing.location || `${listing.subCity}, ${listing.city}`} · {listing.type}
-                        </p>
-                      </div>
-                    </div>
+                    )}
 
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-[15px] text-foreground">
-                        ETB {Number(listing.price || listing.nightlyPrice || 0).toLocaleString()}
-                        <span className="text-[12px] font-normal text-muted-foreground">/nt</span>
+                    <div className="p-5">
+                      <h3 className="font-bold text-[16px] text-foreground mb-1 truncate">
+                        {listing.title || listing.name}
+                      </h3>
+                      <p className="text-[13px] text-muted-foreground mb-3">
+                        {listing.location || `${listing.subCity}, ${listing.city}`}
                       </p>
-                      <span className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[11px] font-bold">
-                        Active
-                      </span>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <p className="text-[16px] font-bold text-primary">
+                          ETB {Number(listing.price || listing.nightlyPrice || 0).toLocaleString()}
+                          <span className="text-[12px] font-normal text-muted-foreground"> / night</span>
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteListing(listing.id)}
+                          className="p-2 rounded-xl text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Remove listing"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </section>
+          )}
 
-            {/* Right: Upcoming Reservations */}
-            <section className="rounded-3xl border border-border bg-white p-7 shadow-sm">
-              <div className="mb-6 flex items-center justify-between">
+          {/* TAB 3: REVIEWS */}
+          {activeTab === 'Reviews' && (
+            <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Star size={24} />
+                </div>
                 <div>
-                  <h2 className="font-serif text-[24px] font-bold text-foreground">
-                    Recent reservations
+                  <h2 className="font-serif text-[28px] font-bold text-foreground">
+                    Guest Reviews & Feedback
                   </h2>
-                  <p className="text-[13px] text-muted-foreground">Upcoming guest stays</p>
+                  <p className="text-[14px] text-muted-foreground">
+                    Overall rating score: <strong>4.92 / 5.0</strong>
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-3.5">
-                {bookings.map((booking) => (
-                  <div key={booking.id} className="p-4 rounded-2xl bg-gray-50/70 border border-border">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-bold text-[14px] text-foreground">{booking.guestName}</p>
-                      <span className="font-bold text-[14px] text-primary">
-                        ETB {booking.amount.toLocaleString()}
-                      </span>
+              <div className="space-y-4">
+                {[
+                  { name: 'Bethlehem Alemu', comment: 'Wonderful host! The apartment was spotless and exactly as described in Bole.', date: 'Aug 2026', rating: 5 },
+                  { name: 'Michael Jenkins', comment: 'Fast Wi-Fi, great location, and very responsive communication. Will stay again.', date: 'Jul 2026', rating: 5 },
+                ].map((rev, i) => (
+                  <div key={i} className="p-5 rounded-2xl border border-border bg-gray-50/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-bold text-[15px] text-foreground">{rev.name}</p>
+                      <div className="flex items-center gap-1">
+                        <Star size={14} className="fill-amber-400 text-amber-400" />
+                        <span className="text-[13px] font-bold">{rev.rating}.0</span>
+                      </div>
                     </div>
-                    <p className="text-[12px] text-muted-foreground flex items-center gap-1.5">
-                      <Clock size={13} /> {booking.dates}
-                    </p>
+                    <p className="text-[14px] text-muted-foreground">{rev.comment}</p>
+                    <p className="text-[12px] text-muted-foreground/80 mt-2">{rev.date}</p>
                   </div>
                 ))}
               </div>
             </section>
-          </div>
-        )}
-
-        {/* TAB 2: LISTINGS */}
-        {activeTab === 'Listings' && (
-          <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="font-serif text-[28px] font-bold text-foreground">
-                  My Properties ({listings.length})
-                </h2>
-                <p className="text-[14px] text-muted-foreground">
-                  Update your descriptions, nightly prices, and photos.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={goToNewProperty}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary hover:bg-[#c82333] px-5 py-3 text-[14px] font-bold text-white shadow-sm transition-all"
-              >
-                <Plus size={18} />
-                Add new place
-              </button>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {listings.map((listing) => (
-                <div key={listing.id} className="rounded-3xl border border-border overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
-                  {listing.image && (
-                    <div className="aspect-[16/9] w-full bg-gray-100 overflow-hidden relative">
-                      <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
-                      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/95 text-[11px] font-bold uppercase tracking-wider text-foreground">
-                        {listing.type || 'Property'}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="p-5">
-                    <h3 className="font-bold text-[16px] text-foreground mb-1 truncate">
-                      {listing.title || listing.name}
-                    </h3>
-                    <p className="text-[13px] text-muted-foreground mb-3">
-                      {listing.location || `${listing.subCity}, ${listing.city}`}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <p className="text-[16px] font-bold text-primary">
-                        ETB {Number(listing.price || listing.nightlyPrice || 0).toLocaleString()}
-                        <span className="text-[12px] font-normal text-muted-foreground"> / night</span>
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => deleteListing(listing.id)}
-                        className="p-2 rounded-xl text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Remove listing"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* TAB 3: CALENDAR */}
-        {activeTab === 'Calendar' && (
-          <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
-            <div className="mb-6">
-              <h2 className="font-serif text-[28px] font-bold text-foreground">
-                Host Calendar & Availability
-              </h2>
-              <p className="text-[14px] text-muted-foreground">
-                View your confirmed booking dates and quickly block specific days.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-start">
-              <div className="p-4 bg-gray-50/80 rounded-3xl border border-border">
-                <Calendar
-                  blockedDates={[]}
-                  compact={false}
-                />
-              </div>
-
-              <div className="p-6 rounded-3xl border border-border bg-gray-50/50">
-                <h3 className="font-bold text-[16px] text-foreground mb-3">Calendar Quick Tips</h3>
-                <ul className="space-y-2 text-[14px] text-muted-foreground">
-                  <li>• Keep your calendar updated to maintain higher search ranking.</li>
-                  <li>• Guests booking 7+ days ahead receive Ethiopian holiday discounts.</li>
-                  <li>• Instant bookings sync automatically with your CBE Birr / Telebirr notifications.</li>
-                </ul>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* TAB 4: EARNINGS */}
-        {activeTab === 'Earnings' && (
-          <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <Banknote size={24} />
-              </div>
-              <div>
-                <h2 className="font-serif text-[28px] font-bold text-foreground">
-                  Earnings & Payouts
-                </h2>
-                <p className="text-[14px] text-muted-foreground">
-                  Track your monthly revenue and configure payout accounts.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 mb-8">
-              <div className="p-6 rounded-3xl bg-[#f9f7f2] border border-border">
-                <p className="text-[13px] font-bold uppercase tracking-wider text-muted-foreground">Total Payouts</p>
-                <p className="text-[38px] font-bold font-serif text-foreground mt-2">
-                  ETB {totalEarnings.toLocaleString()}
-                </p>
-                <p className="text-[13px] text-green-700 font-semibold mt-1">✓ Next payout processed every Tuesday</p>
-              </div>
-
-              <div className="p-6 rounded-3xl border border-border bg-white">
-                <h3 className="font-bold text-[16px] text-foreground mb-3">Linked Payout Accounts</h3>
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-border">
-                    <span className="font-semibold text-[14px]">Telebirr Payout (09***412)</span>
-                    <span className="text-[11px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Primary</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-border">
-                    <span className="font-semibold text-[14px]">Commercial Bank of Ethiopia (CBE)</span>
-                    <span className="text-[11px] text-muted-foreground">Active</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* TAB 5: REVIEWS */}
-        {activeTab === 'Reviews' && (
-          <section className="rounded-3xl border border-border bg-white p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <Star size={24} />
-              </div>
-              <div>
-                <h2 className="font-serif text-[28px] font-bold text-foreground">
-                  Guest Reviews & Feedback
-                </h2>
-                <p className="text-[14px] text-muted-foreground">
-                  Overall rating score: <strong>4.92 / 5.0</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                { name: 'Bethlehem Alemu', comment: 'Wonderful host! The apartment was spotless and exactly as described in Bole.', date: 'Aug 2026', rating: 5 },
-                { name: 'Michael Jenkins', comment: 'Fast Wi-Fi, great location, and very responsive communication. Will stay again.', date: 'Jul 2026', rating: 5 },
-              ].map((rev, i) => (
-                <div key={i} className="p-5 rounded-2xl border border-border bg-gray-50/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-[15px] text-foreground">{rev.name}</p>
-                    <div className="flex items-center gap-1">
-                      <Star size={14} className="fill-amber-400 text-amber-400" />
-                      <span className="text-[13px] font-bold">{rev.rating}.0</span>
-                    </div>
-                  </div>
-                  <p className="text-[14px] text-muted-foreground">{rev.comment}</p>
-                  <p className="text-[12px] text-muted-foreground/80 mt-2">{rev.date}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

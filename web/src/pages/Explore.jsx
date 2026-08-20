@@ -47,7 +47,7 @@ const Explore = () => {
   const amenityOptions = [
     'Wi-Fi',
     'Kitchen',
-    'Free parking on premises',
+    'Free parking',
     'Private pool',
   ];
 

@@ -119,7 +119,7 @@ const Home = () => {
     if (user) {
       navigate('/host/list');
     } else {
-      navigate('/login', { state: { from: '/host/list' } });
+      navigate('/login', { state: { from: '/host' } });
     }
   };
 
@@ -331,7 +331,7 @@ const Home = () => {
                   onClick={handleStartHosting}
                   className="bg-primary hover:bg-[#c82333] text-white px-7 py-3.5 rounded-xl text-[15px] font-bold shadow-md hover:shadow-lg transition-all"
                 >
-                  Start hosting today
+                  Start hosting 
                 </button>
               </div>
             </div>
