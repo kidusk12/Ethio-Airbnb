@@ -132,7 +132,7 @@ const Book = () => {
   // Payment method options
   const paymentOptions = [
     { id: 'telebirr', label: 'Telebirr', sub: 'Mobile wallet' },
-    { id: 'cbe',      label: 'CBE Birr / Bank', sub: 'Commercial Bank of Ethiopia' },
+    { id: 'cbe',      label: 'CBE', sub: 'Commercial Bank of Ethiopia' },
     { id: 'abyssinia', label: 'Bank of Abyssinia', sub: 'BOA mobile banking' },
     { id: 'dashen',   label: 'Dashen Bank', sub: 'Dashen mobile banking' },
     { id: 'awash',    label: 'Awash Bank', sub: 'Awash mobile banking' },
@@ -317,30 +317,6 @@ const Book = () => {
                     </div>
                     <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                   </div>
-
-                  {/* Options list (visual) */}
-                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {paymentOptions.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(opt.id)}
-                        className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all ${
-                          paymentMethod === opt.id
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-border hover:border-stone-300 bg-stone-50/50'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-white border border-stone-100 shadow-sm">
-                          <BankLogo id={opt.id} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-[12px] text-foreground leading-tight truncate">{opt.label}</div>
-                          <div className="text-[10px] text-muted-foreground truncate">{opt.sub}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Dynamic Payment Info Box */}
@@ -363,9 +339,10 @@ const Book = () => {
                       <button
                         type="button"
                         onClick={() => copyToClipboard(paymentDetails[paymentMethod].accountName, 'name')}
-                        className="self-start sm:self-center px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-stone-100 flex items-center gap-1 transition-colors"
+                        title="Copy name"
+                        className="self-start sm:self-center w-8 h-8 rounded-lg border border-border hover:bg-stone-100 flex items-center justify-center transition-colors"
                       >
-                        {copiedField === 'name' ? (<><Check size={12} className="text-emerald-600" /> Copied</>) : (<><Copy size={12} /> Copy name</>)}
+                        {copiedField === 'name' ? (<Check size={14} className="text-emerald-600" />) : (<Copy size={14} />)}
                       </button>
                     </div>
 
@@ -377,9 +354,10 @@ const Book = () => {
                       <button
                         type="button"
                         onClick={() => copyToClipboard(paymentDetails[paymentMethod].accountNumber, 'account')}
-                        className="self-start sm:self-center px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:bg-[#c82333] flex items-center gap-1 shadow-sm transition-colors"
+                        title="Copy number"
+                        className="self-start sm:self-center w-8 h-8 rounded-lg bg-primary text-white hover:bg-[#c82333] flex items-center justify-center shadow-sm transition-colors"
                       >
-                        {copiedField === 'account' ? (<><Check size={12} /> Copied!</>) : (<><Copy size={12} /> Copy number</>)}
+                        {copiedField === 'account' ? (<Check size={14} />) : (<Copy size={14} />)}
                       </button>
                     </div>
 
@@ -467,10 +445,6 @@ const Book = () => {
                 Confirm and pay
               </button>
 
-              <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <Lock size={13} className="text-emerald-600" />
-                <span>Secure booking · encrypted checkout</span>
-              </div>
             </aside>
           </div>
         </div>
@@ -532,13 +506,14 @@ const Book = () => {
               {/* Optional Transaction ID / Reference */}
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                  Transaction Reference / SMS Code (Optional)
+                  Transaction Reference *
                 </label>
                 <input
                   type="text"
                   value={transactionRef}
                   onChange={(e) => setTransactionRef(e.target.value)}
                   placeholder="e.g. TXN-98421074"
+                  required
                   className="w-full bg-stone-50 border border-border rounded-xl px-3.5 py-2.5 text-xs font-mono focus:border-primary outline-none"
                 />
               </div>

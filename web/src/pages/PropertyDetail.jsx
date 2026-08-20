@@ -68,7 +68,17 @@ const PropertyDetail = () => {
   const totalPrice = basePrice + cleaningFee + serviceFee;
 
   const handleReserve = () => {
-    navigate(`/book/${property.slug}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guestsCount}`);
+    const bookingPath = `/book/${property.slug}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guestsCount}`;
+
+    if (!user) {
+      // Not logged in — send to Login, remembering where to come back to.
+      // Login.jsx reads location.state.from and navigates there after a
+      // successful login (email/password or Google).
+      navigate('/login', { state: { from: bookingPath } });
+      return;
+    }
+
+    navigate(bookingPath);
   };
 
   return (
