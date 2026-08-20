@@ -89,12 +89,12 @@ class AuthController extends StateNotifier<AuthState> {
     required GetCurrentUser getCurrentUser,
     required AuthRepository authRepository,
     required TokenStorage tokenStorage,
-  })  : _registerUser = registerUser,
-        _loginUser = loginUser,
-        _getCurrentUser = getCurrentUser,
-        _authRepository = authRepository,
-        _tokenStorage = tokenStorage,
-        super(const AuthInitial()) {
+  }) : _registerUser = registerUser,
+       _loginUser = loginUser,
+       _getCurrentUser = getCurrentUser,
+       _authRepository = authRepository,
+       _tokenStorage = tokenStorage,
+       super(const AuthInitial()) {
     _restoreSession();
   }
 
@@ -108,10 +108,7 @@ class AuthController extends StateNotifier<AuthState> {
 
     final result = await _getCurrentUser();
 
-    state = result.fold(
-      (_) => const AuthIdle(),
-      (user) => AuthSuccess(user),
-    );
+    state = result.fold((_) => const AuthIdle(), (user) => AuthSuccess(user));
   }
 
   Future<void> register({
@@ -147,10 +144,7 @@ class AuthController extends StateNotifier<AuthState> {
   }) async {
     state = const AuthLoading();
 
-    final result = await _loginUser(
-      email: emailOrPhone,
-      password: password,
-    );
+    final result = await _loginUser(email: emailOrPhone, password: password);
 
     state = result.fold(
       (message) => AuthError(message),
@@ -162,11 +156,11 @@ class AuthController extends StateNotifier<AuthState> {
     required String name,
     required String email,
   }) async {
-    final result = await _authRepository.updateProfile(name: name, email: email);
-    result.fold(
-      (_) {},
-      (user) => state = AuthSuccess(user),
+    final result = await _authRepository.updateProfile(
+      name: name,
+      email: email,
     );
+    result.fold((_) {}, (user) => state = AuthSuccess(user));
     return result;
   }
 
@@ -185,16 +179,23 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthIdle();
   }
 
+  /// Testing only — forces a signed-in state with a fake user, bypassing
+  /// the real login API. Remove once the backend is live.
+  void mockLogin(User user) {
+    state = AuthSuccess(user);
+  }
+
   bool get isAuthenticated => state is AuthSuccess;
 }
 
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) {
-  return AuthController(
-    registerUser: ref.watch(registerUserProvider),
-    loginUser: ref.watch(loginUserProvider),
-    getCurrentUser: ref.watch(getCurrentUserProvider),
-    authRepository: ref.watch(authRepositoryProvider),
-    tokenStorage: ref.watch(tokenStorageProvider),
-  );
-});
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    return AuthController(
+      registerUser: ref.watch(registerUserProvider),
+      loginUser: ref.watch(loginUserProvider),
+      getCurrentUser: ref.watch(getCurrentUserProvider),
+      authRepository: ref.watch(authRepositoryProvider),
+      tokenStorage: ref.watch(tokenStorageProvider),
+    );
+  },
+);
