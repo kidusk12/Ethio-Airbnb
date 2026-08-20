@@ -120,3 +120,17 @@ export async function softDeleteListingAsAdmin(listingId) {
 
   return rows[0] ?? null;
 }
+
+export async function getDashboardStats() {
+  const { rows } = await pool.query(`
+    SELECT
+      COUNT(*) AS total_listings,
+      COUNT(CASE WHEN status = 'approved' THEN 1 END) AS approved_listings,
+      COUNT(CASE WHEN status = 'rejected' THEN 1 END) AS rejected_listings,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending_listings
+    FROM listings
+    WHERE active = true
+  `);
+
+  return rows[0] ?? null;
+}

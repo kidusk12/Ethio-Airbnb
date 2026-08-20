@@ -75,3 +75,12 @@ export async function deleteListing(req, res, next) {
     return next(error);
   }
 }
+
+export async function getStats(req, res, next) {
+  try {
+    const stats = await adminService.getStats();
+    return success(res, { data: stats });
+  } catch (error) {
+    return next(error);
+  }
+}

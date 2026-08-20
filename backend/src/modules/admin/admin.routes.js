@@ -22,5 +22,6 @@ adminRouter.post(
 );
 
 adminRouter.delete('/listings/:id', controller.deleteListing);
+adminRouter.get('/stats', controller.getStats);
 
 export default adminRouter;

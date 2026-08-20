@@ -8,6 +8,12 @@ import {
   softDeleteListingAsAdmin,
 } from './admin.repository.js';
 
+import { getDashboardStats } from './admin.repository.js';
+
+export async function getStats() {
+  return getDashboardStats();
+}
+
 export async function getPendingListings() {
   return findPendingListings();
 }
