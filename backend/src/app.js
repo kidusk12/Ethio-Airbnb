@@ -1,5 +1,6 @@
 import path from 'path';
 import adminRouter from './modules/admin/admin.routes.js';
+import bookingRouter from './modules/bookings/booking.routes.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -7,6 +8,8 @@ import express from 'express';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { authRouter, hostRouter } from './modules/auth/auth.routes.js';
 import listingRouter from './modules/listings/listing.routes.js';
+import { adminPaymentRouter, bookingPaymentRouter } from './modules/payments/payment.routes.js';
+import payoutRouter from './modules/payouts/payout.routes.js';
 import uploadRouter from './modules/uploads/uploads.routes.js';
 
 const app = express();
@@ -33,7 +36,11 @@ app.use('/api/auth', authRouter);
 app.use('/api/hosts', hostRouter);
 app.use('/api/uploads', uploadRouter);
 app.use('/api/listings', listingRouter);
+app.use('/api/admin/payments', adminPaymentRouter);
+app.use('/api/admin/payouts', payoutRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/bookings', bookingRouter);
+app.use('/api/bookings', bookingPaymentRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

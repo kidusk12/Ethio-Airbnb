@@ -21,12 +21,13 @@ const allowedMimeTypes = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
+  'application/pdf', // host wizard accepts image/*,.pdf for ID document + house deed
 ]);
 
 function fileFilter(req, file, callback) {
   if (!allowedMimeTypes.has(file.mimetype)) {
     return callback(
-      new Error('Only JPG, PNG, and WEBP image files are allowed.'),
+      new Error('Only JPG, PNG, WEBP, or PDF files are allowed.'),
     );
   }
 
