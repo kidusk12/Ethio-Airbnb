@@ -31,6 +31,7 @@ const STEPS = [
   { key: 'pricing', label: 'Pricing' },
   { key: 'availability', label: 'Availability' },
   { key: 'house-rules', label: 'House rules' },
+  { key: 'bank-details', label: 'Bank details' },
   { key: 'preview', label: 'Terms & Publish' },
 ];
 
@@ -135,10 +136,7 @@ const AMENITIES = [
 const HOUSE_RULES = [
   'No parties or loud events',
   'No smoking indoors',
-  'Pets allowed on request',
-  'Quiet hours after 10 PM',
-  'Valid government ID required at check-in',
-  'Shoes off inside the home',
+  'Pets not allowed',
 ];
 
 const List = () => {
@@ -148,10 +146,14 @@ const List = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepError, setStepError] = useState('');
 
+  // Which action a calendar tap performs on the Availability step:
+  // 'available' marks a date as confirmed-available, 'blocked' blocks it.
+  const [availabilityMode, setAvailabilityMode] = useState('available');
+
   const [formData, setFormData] = useState({
     propertyType: '',
     streetAddress: '',
-    city: 'Addis Ababa',
+    city: '',
     subCity: '',
     idDocument: null,
     houseDeed: null,
@@ -168,10 +170,14 @@ const List = () => {
     minNights: 1,
     instantBook: true,
     blockedDates: [],
+    markedAvailableDates: [],
     houseRules: [],
     customRules: [],
     newRuleText: '',
     regulationsFile: null,
+    bankName: '',
+    accountHolderName: '',
+    accountNumber: '',
     agreedToTerms: false,
   });
 
@@ -197,8 +203,8 @@ const List = () => {
         setStepError('Please select a city.');
         return false;
       }
-      if (!formData.subCity) {
-        setStepError('Please select a sub-city / district.');
+      if (!formData.subCity || formData.subCity.trim() === '') {
+        setStepError('Please select a sub-city.');
         return false;
       }
     } else if (key === 'photos') {
@@ -243,6 +249,23 @@ const List = () => {
         setStepError('Please select or add at least one house rule.');
         return false;
       }
+    } else if (key === 'bank-details') {
+      if (!formData.bankName.trim()) {
+        setStepError('Please select your bank name.');
+        return false;
+      }
+      if (!formData.accountHolderName.trim()) {
+        setStepError('Please enter the account holder name.');
+        return false;
+      }
+      if (!formData.accountNumber.trim() || formData.accountNumber.trim().length < 6) {
+        setStepError(
+          formData.bankName === 'Telebirr'
+            ? 'Please enter a valid phone number (at least 6 digits).'
+            : 'Please enter a valid account number (at least 6 digits).'
+        );
+        return false;
+      }
     }
 
     setStepError('');
@@ -267,7 +290,16 @@ const List = () => {
 
   const handleStepClick = (index) => {
     if (index > currentStep) {
-      if (!validateStep(currentStep)) return;
+      // Jumping ahead via the pill nav must not skip validation on the
+      // steps in between — check each one, and stop at the first that
+      // isn't complete instead of jumping straight to the target.
+      for (let i = currentStep; i < index; i++) {
+        if (!validateStep(i)) {
+          setCurrentStep(i);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      }
     }
     setStepError('');
     setCurrentStep(index);
@@ -332,6 +364,11 @@ const List = () => {
       reviews: 0,
       createdAt: new Date().toISOString(),
       image: formData.propertyPhotos[0]?.preview || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267',
+      bankDetails: {
+        bankName: formData.bankName,
+        accountHolderName: formData.accountHolderName,
+        accountNumber: formData.accountNumber,
+      },
     };
 
     try {
@@ -347,7 +384,7 @@ const List = () => {
   };
 
   const progressPercent = ((currentStep + 1) / STEPS.length) * 100;
-  const currentSubcities = CITY_SUBCITIES[formData.city] || CITY_SUBCITIES['Addis Ababa'];
+  const currentSubcities = formData.city ? (CITY_SUBCITIES[formData.city] || []) : [];
 
   const renderStepContent = () => {
     switch (STEPS[currentStep].key) {
@@ -394,11 +431,13 @@ const List = () => {
                   onChange={(e) => {
                     const newCity = e.target.value;
                     updateField('city', newCity);
-                    const firstSub = CITY_SUBCITIES[newCity]?.[0] || '';
-                    updateField('subCity', firstSub);
+                    updateField('subCity', '');
                   }}
                   className="w-full px-4 py-3 rounded-xl border border-border text-[15px] font-medium text-foreground bg-white focus:outline-none focus:border-primary transition-colors cursor-pointer"
                 >
+                  <option value="" disabled>
+                    Select a city
+                  </option>
                   {CITIES.map((city) => (
                     <option key={city} value={city}>
                       {city}
@@ -410,15 +449,16 @@ const List = () => {
               {/* Sub-city */}
               <div>
                 <label className="block text-[14px] font-semibold text-foreground mb-1.5">
-                  Sub-city / District in {formData.city}
+                  Sub-city {formData.city && `in ${formData.city}`}
                 </label>
                 <select
                   value={formData.subCity}
                   onChange={(e) => updateField('subCity', e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-border text-[15px] font-medium text-foreground bg-white focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                  disabled={!formData.city}
+                  className="w-full px-4 py-3 rounded-xl border border-border text-[15px] font-medium text-foreground bg-white focus:outline-none focus:border-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="" disabled>
-                    Select sub-city in {formData.city}
+                    {formData.city ? `Select sub-city in ${formData.city}` : 'Select a city first'}
                   </option>
                   {currentSubcities.map((sub) => (
                     <option key={sub} value={sub}>
@@ -759,28 +799,7 @@ const List = () => {
               </div>
             </div>
 
-            {/* Kitchen & Dining */}
-            <div>
-              <label className="block text-[14px] font-bold text-foreground mb-2">
-                Kitchen & dining setup
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {['Full private kitchen', 'Kitchenette / Coffee bar', 'Shared host kitchen'].map((setup) => (
-                  <button
-                    key={setup}
-                    type="button"
-                    onClick={() => updateField('kitchenType', setup)}
-                    className={`p-3.5 rounded-xl border text-[13px] font-semibold text-center transition-all ${
-                      formData.kitchenType === setup
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-foreground hover:border-primary/40'
-                    }`}
-                  >
-                    {setup}
-                  </button>
-                ))}
-              </div>
-            </div>
+           
           </div>
         );
 
@@ -809,15 +828,31 @@ const List = () => {
         );
 
       case 'availability': {
+        // A calendar tap always calls this. What it actually does — mark
+        // the date available or block it — depends on availabilityMode,
+        // so the host always knows the effect before they click.
         const toggleBlockedDate = (date) => {
           const iso = date.toDateString();
           setFormData((prev) => {
-            const exists = prev.blockedDates.some((b) => new Date(b).toDateString() === iso);
+            if (availabilityMode === 'blocked') {
+              const alreadyBlocked = prev.blockedDates.some((b) => new Date(b).toDateString() === iso);
+              return {
+                ...prev,
+                blockedDates: alreadyBlocked ? prev.blockedDates : [...prev.blockedDates, date.toISOString()],
+                markedAvailableDates: prev.markedAvailableDates.filter(
+                  (b) => new Date(b).toDateString() !== iso
+                ),
+              };
+            }
+
+            // availabilityMode === 'available'
+            const alreadyMarked = prev.markedAvailableDates.some((b) => new Date(b).toDateString() === iso);
             return {
               ...prev,
-              blockedDates: exists
-                ? prev.blockedDates.filter((b) => new Date(b).toDateString() !== iso)
-                : [...prev.blockedDates, date.toISOString()],
+              blockedDates: prev.blockedDates.filter((b) => new Date(b).toDateString() !== iso),
+              markedAvailableDates: alreadyMarked
+                ? prev.markedAvailableDates
+                : [...prev.markedAvailableDates, date.toISOString()],
             };
           });
         };
@@ -825,13 +860,61 @@ const List = () => {
         return (
           <div className="space-y-6">
             <p className="text-[14px] text-muted-foreground">
-              Tap dates on your calendar to toggle them between <strong>Available</strong> and <strong>Blocked</strong>.
+              Choose what you're marking, then tap dates on the calendar.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-start">
               <div className="p-3 bg-gray-50/80 rounded-2xl border border-border flex flex-col items-center">
+                {/* Mode switcher — makes it explicit what a tap will do */}
+                <div className="w-[245px] flex items-center bg-gray-100 rounded-xl p-1 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setAvailabilityMode('available')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[12px] font-bold transition-colors ${
+                      availabilityMode === 'available'
+                        ? 'bg-white text-green-600 shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        availabilityMode === 'available' ? 'bg-green-500' : 'bg-gray-400'
+                      }`}
+                    />
+                    Mark Available
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvailabilityMode('blocked')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[12px] font-bold transition-colors ${
+                      availabilityMode === 'blocked'
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        availabilityMode === 'blocked' ? 'bg-primary' : 'bg-gray-400'
+                      }`}
+                    />
+                    Mark Blocked
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground text-center mb-3 max-w-[220px]">
+                  Tapping a date will mark it{' '}
+                  {availabilityMode === 'available' ? (
+                    <span className="font-semibold text-green-600">Available</span>
+                  ) : (
+                    <span className="font-semibold text-primary">Blocked</span>
+                  )}{' '}
+                  {availabilityMode === 'available'
+                    ? 'for guests to book.'
+                    : "— guests can't book it."}
+                </p>
+
                 <Calendar
                   blockedDates={formData.blockedDates}
+                  markedAvailable={formData.markedAvailableDates}
                   onToggleDate={toggleBlockedDate}
                   compact={true}
                 />
@@ -956,7 +1039,7 @@ const List = () => {
                 type="text"
                 value={formData.newRuleText}
                 onChange={(e) => updateField('newRuleText', e.target.value)}
-                placeholder="Add custom rule (e.g. No photography shoots without permission)"
+                placeholder="Add custom rule"
                 className="flex-1 px-4 py-2.5 rounded-xl border border-border text-[14px] focus:outline-none focus:border-primary"
               />
               <button
@@ -976,6 +1059,82 @@ const List = () => {
             </div>
           </div>
         );
+
+      case 'bank-details': {
+        const isTelebirr = formData.bankName === 'Telebirr';
+        return (
+          <div className="space-y-6">
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-[13px]">
+              <ShieldCheck size={20} className="flex-shrink-0 mt-0.5 text-amber-600" />
+              <div>
+                <p className="font-bold mb-0.5">Payout information — kept private</p>
+                <p className="text-amber-700">
+                  Your bank details are only visible to Ethio-Airbnb admins and are used exclusively to transfer your earnings after guests check out. They will never be shared with guests.
+                </p>
+              </div>
+            </div>
+
+            {/* Bank Name */}
+            <div>
+              <label className="block text-[14px] font-bold text-foreground mb-1.5">
+                Bank name
+              </label>
+              <select
+                value={formData.bankName}
+                onChange={(e) => updateField('bankName', e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-border text-[15px] font-medium text-foreground bg-white focus:outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="" disabled>Select your bank</option>
+                {[
+                  'Commercial Bank of Ethiopia (CBE)',
+                  'Awash Bank',
+                  'Dashen Bank',
+                  'Abyssinia Bank',
+                  'Nib International Bank',
+                  'Wegagen Bank',
+                  'United Bank',
+                  'Cooperative Bank of Oromia',
+                  'Berhan Bank',
+                  'Amhara Bank',
+                  'Telebirr',
+                  'M-Pesa Ethiopia',
+                ].map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Account Holder Name */}
+            <div>
+              <label className="block text-[14px] font-bold text-foreground mb-1.5">
+                Account holder full name
+              </label>
+              <input
+                type="text"
+                value={formData.accountHolderName}
+                onChange={(e) => updateField('accountHolderName', e.target.value)}
+                placeholder="e.g. Abebe Kebede"
+                className="w-full px-4 py-3 rounded-xl border border-border text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+
+            {/* Account Number / Phone Number */}
+            <div>
+              <label className="block text-[14px] font-bold text-foreground mb-1.5">
+                {isTelebirr ? 'Phone number' : 'Account number'}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formData.accountNumber}
+                onChange={(e) => updateField('accountNumber', e.target.value.replace(/\D/g, ''))}
+                placeholder={isTelebirr ? 'e.g. 0912345678' : 'e.g. 1000123456789'}
+                className="w-full px-4 py-3 rounded-xl border border-border text-[15px] font-medium text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors tracking-wider"
+              />
+            </div>
+          </div>
+        );
+      }
 
       case 'preview':
         return (
