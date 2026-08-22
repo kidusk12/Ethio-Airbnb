@@ -30,7 +30,7 @@ app.use(
 app.use(express.json());
 
 // Uploaded files are accessible through: http://localhost:5000/uploads/file.jpg
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+app.use('/uploads', cors({ origin: process.env.CLIENT_ORIGIN?.split(',') ?? true }), express.static(path.resolve(process.cwd(), 'uploads')));
 
 app.get('/api/health', (req, res) => {
   res.json({

@@ -17,39 +17,44 @@ function Login() {
 
   const redirectPath = location.state?.from || "/host/list";
 
-  const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
     event.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError("Please fill in both email and password.");
       return;
     }
 
-    // Determine user name from email prefix or stored register data
-    let firstName = "Abebe";
-    const existingStored = localStorage.getItem("ethio_user");
-    if (existingStored) {
-      try {
-        const parsed = JSON.parse(existingStored);
-        if (parsed?.firstName) firstName = parsed.firstName;
-      } catch {
-        // ignore
+    try {
+      const response = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result?.message || "Incorrect email or password.");
+        return;
       }
-    } else {
-      const emailPrefix = email.split("@")[0];
-      firstName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+
+      const { user, token } = result.data;
+
+      login(user, token);
+
+           const roleHome = {
+        guest: "/guest_dashboard",
+        host: "/host/Host_dashboard",
+        admin: "/admin",
+      };
+
+      const destination = location.state?.from || roleHome[user.role] || "/";
+      navigate(destination, { replace: true });
+    } catch (err) {
+      setError("Could not reach the server. Please try again.");
     }
-
-    const userData = {
-      email,
-      firstName,
-      name: `${firstName} Tesfaye`,
-      role: "host",
-    };
-
-    login(userData, "mock_token_" + Date.now());
-    navigate(redirectPath, { replace: true });
   };
-
+  
   return (
     <AuthLayout>
       {/* LOGO */}

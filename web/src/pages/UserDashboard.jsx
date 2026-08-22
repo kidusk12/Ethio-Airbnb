@@ -7,10 +7,7 @@ import {
   TrendingUp, Clock, CheckCircle2, X, PanelLeft,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import {
-  mockBookings, mockMessages, mockSavedStays,
-  mockPastTrips, mockGuest,
-} from "../data/mockDashboardData";
+import { getMyBookings, submitReview, resolveFileUrl } from "../lib/api";import { mockGuest } from "../data/mockDashboardData"; // kept temporarily — see note below
 import Profile from "./Profile";
 import NavBar1 from "../components/NavBar1";
 
@@ -29,10 +26,10 @@ const TABS = [
 ];
 
 const STATUS_MAP = {
-  upcoming:  { color: "#2563eb", bg: "#eff6ff", label: "Upcoming"   },
-  active:    { color: A,         bg: A_LITE,    label: "Active now" },
-  completed: { color: "#6b7280", bg: "#f3f4f6", label: "Completed"  },
-  cancelled: { color: "#dc2626", bg: "#fef2f2", label: "Cancelled"  },
+  pending_payment: { color: "#d97706", bg: "#fffbeb", label: "Awaiting confirmation" },
+  confirmed:       { color: A,         bg: A_LITE,    label: "Confirmed"            },
+  completed:       { color: "#6b7280", bg: "#f3f4f6", label: "Completed"            },
+  cancelled:       { color: "#dc2626", bg: "#fef2f2", label: "Cancelled"            },
 };
 
 const fmtDate = (iso) =>
@@ -200,36 +197,28 @@ function Empty({ icon: Icon, text, cta, onCta }) {
 
 // ─── Booking Card ─────────────────────────────────────────────────────────────
 function BookingCard({ booking }) {
-  const { propertyName, propertyType, location, image, checkIn, checkOut, guests, totalPriceETB, status, hostName } = booking;
-  const s = STATUS_MAP[status] ?? STATUS_MAP.upcoming;
+  const { propertyName, image, checkIn, checkOut, totalPriceETB, status } = booking;
+  const s = STATUS_MAP[status] ?? STATUS_MAP.pending_payment;
   const n = nightsBetween(checkIn, checkOut);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col sm:flex-row group hover:shadow-md transition-shadow">
       <div className="sm:w-56 flex-shrink-0 relative overflow-hidden">
-        <img src={image} alt={propertyName} className="w-full h-52 sm:h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        {image && <img src={image} alt={propertyName} className="w-full h-52 sm:h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
         <span className="absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: s.bg + "e8", color: s.color }}>{s.label}</span>
       </div>
       <div className="flex-1 p-5 md:p-6 flex flex-col justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: A }}>{propertyType}</p>
           <h3 className="text-[17px] font-semibold text-gray-900 leading-snug mb-2">{propertyName}</h3>
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <MapPin size={13} /><span className="text-[13px]">{location}</span>
-          </div>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12px] text-gray-500">
-          <span className="flex items-center gap-1.5"><CalendarDays size={13} color="#9ca3af" />{fmtDate(checkIn)} — {fmtDate(checkOut)}<span className="font-medium text-gray-400"> · {n} night{n !== 1 ? "s" : ""}</span></span>
-          <span className="flex items-center gap-1.5"><Users size={13} color="#9ca3af" />{guests} guest{guests !== 1 ? "s" : ""}</span>
+          <span className="flex items-center gap-1.5">
+            <CalendarDays size={13} color="#9ca3af" />
+            {fmtDate(checkIn)} — {fmtDate(checkOut)}
+            <span className="font-medium text-gray-400"> · {n} night{n !== 1 ? "s" : ""}</span>
+          </span>
         </div>
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full text-white flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: A }}>{hostName?.[0]?.toUpperCase()}</div>
-            <div>
-              <p className="text-[10px] text-gray-400 leading-none">Hosted by</p>
-              <p className="text-[12px] font-semibold text-gray-700">{hostName}</p>
-            </div>
-          </div>
+        <div className="flex items-center justify-end pt-4 border-t border-gray-100">
           <div className="text-right">
             <p className="text-[17px] font-bold text-gray-900 tabular-nums">ETB {totalPriceETB.toLocaleString()}</p>
             <p className="text-[11px] text-gray-400">total charged</p>
@@ -242,12 +231,12 @@ function BookingCard({ booking }) {
 
 // ─── Past Trip Card ───────────────────────────────────────────────────────────
 function PastTripCard({ trip, onReview }) {
-  const { id, propertyName, location, image, stayedDates, reviewed, myRating } = trip;
+  const { propertyName, image, checkIn, checkOut, hasReviewed } = trip;
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
       <div className="relative h-44 overflow-hidden">
-        <img src={image} alt={propertyName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        {reviewed && (
+        {image && <img src={image} alt={propertyName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
+        {hasReviewed && (
           <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 rounded-full px-2 py-1">
             <CheckCircle2 size={11} color="#22c55e" />
             <span className="text-[10px] font-semibold text-gray-600">Reviewed</span>
@@ -256,19 +245,11 @@ function PastTripCard({ trip, onReview }) {
       </div>
       <div className="p-4">
         <h4 className="text-[14px] font-semibold text-gray-900 truncate mb-1">{propertyName}</h4>
-        <div className="flex items-center gap-1 text-gray-400 mb-1">
-          <MapPin size={11} /><span className="text-[12px] truncate">{location}</span>
-        </div>
         <div className="flex items-center gap-1 text-gray-400 mb-3">
-          <Clock size={11} /><span className="text-[12px]">{stayedDates}</span>
+          <Clock size={11} /><span className="text-[12px]">{fmtDate(checkIn)} – {fmtDate(checkOut)}</span>
         </div>
-        {reviewed ? (
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} size={13} style={{ fill: i < (myRating ?? 0) ? "#f59e0b" : "#e5e7eb", color: i < (myRating ?? 0) ? "#f59e0b" : "#e5e7eb" }} />
-            ))}
-            <span className="text-[11px] text-gray-400 ml-1.5">{myRating}/5</span>
-          </div>
+        {hasReviewed ? (
+          <p className="text-[11px] text-gray-400">You've reviewed this stay.</p>
         ) : (
           <button
             onClick={() => onReview?.(trip)}
@@ -284,8 +265,10 @@ function PastTripCard({ trip, onReview }) {
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ onNav, onOpenReview }) {
-  const upcoming = mockBookings.filter((b) => b.status === "upcoming" || b.status === "active");
+function OverviewTab({ bookings, onNav, onOpenReview }) {
+  const upcoming = bookings.filter((b) => b.status === "pending_payment" || b.status === "confirmed");
+  const completed = bookings.filter((b) => b.status === "completed");
+
   return (
     <div className="space-y-10">
       <section>
@@ -298,9 +281,14 @@ function OverviewTab({ onNav, onOpenReview }) {
 
       <section>
         <Heading title="Past trips" action={{ label: "View all", fn: () => onNav("trips") }} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {mockPastTrips.map((t) => <PastTripCard key={t.id} trip={t} onReview={onOpenReview} />)}
-        </div>
+        {completed.length
+          ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {completed.map((t) => <PastTripCard key={t.id} trip={t} onReview={onOpenReview} />)}
+            </div>
+          )
+          : <Empty icon={History} text="Your completed stays will appear here." />
+        }
       </section>
 
       <div className="rounded-2xl p-5 flex items-center gap-4 et-pattern" style={{ background: `linear-gradient(120deg, ${A} 0%, #c0392b 100%)` }}>
@@ -318,54 +306,46 @@ function OverviewTab({ onNav, onOpenReview }) {
 }
 
 // ─── Bookings Tab ─────────────────────────────────────────────────────────────
-function BookingsTab() {
-  const upcoming  = mockBookings.filter((b) => b.status === "upcoming" || b.status === "active");
-  const completed = mockBookings.filter((b) => b.status === "completed");
-  const cancelled = mockBookings.filter((b) => b.status === "cancelled");
-
+function BookingsTab({ bookings, upcomingBookings, completedBookings, cancelledBookings }) {
   return (
     <div className="space-y-8">
-      {upcoming.length > 0 && (
+      {upcomingBookings.length > 0 && (
         <section>
-          <Heading title="Upcoming & active" />
-          <div className="space-y-5">{upcoming.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+          <Heading title="Upcoming" />
+          <div className="space-y-5">{upcomingBookings.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
         </section>
       )}
-      {completed.length > 0 && (
+      {completedBookings.length > 0 && (
         <section>
           <Heading title="Completed" />
-          <div className="space-y-5">{completed.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+          <div className="space-y-5">{completedBookings.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
         </section>
       )}
-      {cancelled.length > 0 && (
+      {cancelledBookings.length > 0 && (
         <section>
           <Heading title="Cancelled" />
-          <div className="space-y-5">{cancelled.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+          <div className="space-y-5">{cancelledBookings.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
         </section>
       )}
-      {mockBookings.length === 0 && <Empty icon={CalendarDays} text="No bookings yet." cta="Explore stays" />}
+      {bookings.length === 0 && <Empty icon={CalendarDays} text="No bookings yet." cta="Explore stays" />}
     </div>
   );
 }
 
 // ─── Trips Tab ────────────────────────────────────────────────────────────────
-function TripsTab({ onOpenReview }) {
-  const reviewed   = mockPastTrips.filter((t) => t.reviewed);
-  const unreviewed = mockPastTrips.filter((t) => !t.reviewed);
-
-  const avgRating = reviewed.length
-    ? (reviewed.reduce((s, t) => s + (t.myRating || 0), 0) / reviewed.length).toFixed(1)
-    : null;
+function TripsTab({ bookings, onOpenReview }) {
+  const completed  = bookings.filter((b) => b.status === "completed");
+  const reviewed   = completed.filter((t) => t.hasReviewed);
+  const unreviewed = completed.filter((t) => !t.hasReviewed);
 
   return (
     <div className="space-y-8">
       {/* Stats strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {[
-          { label: "Trips completed", value: mockPastTrips.length,    accent: false },
-          { label: "Reviews left",    value: reviewed.length,         accent: false },
-          { label: "Awaiting review", value: unreviewed.length,       accent: unreviewed.length > 0 },
-          { label: "Avg. rating",     value: avgRating ?? "—",        accent: false },
+          { label: "Trips completed", value: completed.length,   accent: false },
+          { label: "Reviews left",    value: reviewed.length,    accent: false },
+          { label: "Awaiting review", value: unreviewed.length,  accent: unreviewed.length > 0 },
         ].map(({ label, value, accent }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col gap-1" style={{ borderColor: accent ? A + "55" : undefined, background: accent ? A_LITE : undefined }}>
             <p className="text-[26px] font-bold tabular-nums" style={{ color: accent ? A : "#111827" }}>{value}</p>
@@ -375,11 +355,11 @@ function TripsTab({ onOpenReview }) {
       </div>
 
       {/* Cards grid */}
-      {mockPastTrips.length > 0 ? (
+      {completed.length > 0 ? (
         <section>
           <Heading title="All past trips" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {mockPastTrips.map((t) => <PastTripCard key={t.id} trip={t} onReview={onOpenReview} />)}
+            {completed.map((t) => <PastTripCard key={t.id} trip={t} onReview={onOpenReview} />)}
           </div>
         </section>
       ) : (
@@ -391,13 +371,59 @@ function TripsTab({ onOpenReview }) {
 
 // ─── Dashboard root ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { user, logout }            = useAuth();
+  const { user, logout, token }     = useAuth();
   const navigate                    = useNavigate();
   const [tab, setTab]               = useState("overview");
   const [reviewTrip, setReviewTrip] = useState(null);
   const [reviews, setReviews]       = useState({});
+  const [reviewError, setReviewError] = useState(''); 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [bookings, setBookings] = useState([]);
+const [bookingsLoading, setBookingsLoading] = useState(true);
+const [bookingsError, setBookingsError] = useState('');
 
+
+
+useEffect(() => {
+  let isMounted = true;
+
+  getMyBookings(token).then(({ status, body }) => {
+    if (!isMounted) return;
+    if (status !== 200) {
+      setBookingsError(body?.message || 'Could not load your bookings.');
+      setBookingsLoading(false);
+      return;
+    }
+
+    const now = new Date();
+    const mapped = body.data.bookings.map((b) => {
+      const isPastCheckout = new Date(b.checkOut) < now;
+      const derivedStatus =
+        b.status === 'confirmed' && isPastCheckout ? 'completed' : b.status;
+
+      return {
+        id: b.id,
+        listingId: b.listingId,
+        propertyName: b.listingTitle,
+        image: resolveFileUrl(b.coverPhoto),
+        checkIn: b.checkIn,
+        checkOut: b.checkOut,
+        totalPriceETB: Number(b.totalPrice),
+        status: derivedStatus,
+        hasReviewed: b.hasReviewed,
+      };
+    });
+
+    setBookings(mapped);
+    setBookingsLoading(false);
+  });
+
+  return () => { isMounted = false; };
+}, [token]);
+
+const upcomingBookings = bookings.filter((b) => b.status === 'pending_payment' || b.status === 'confirmed');
+const completedBookings = bookings.filter((b) => b.status === 'completed');
+const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
   const guestName = user?.name ?? mockGuest.name;
   const guestFirstName = (() => {
     if (user?.firstName) return user.firstName;
@@ -407,26 +433,34 @@ export default function Dashboard() {
   const initialLetter = guestFirstName.charAt(0).toUpperCase() || 'G';
 
   function handleLogout() { logout(); navigate("/"); }
-  function handleSubmitReview({ tripId, rating, text }) {
-    setReviews((prev) => ({ ...prev, [tripId]: { rating, text } }));
+ async function handleSubmitReview({ tripId, rating, text }) {
+  const { status, body } = await submitReview(tripId, { rating, text }, token);
+
+  if (status !== 201) {
+    setReviewError(body?.message || 'Could not submit your review.');
+    return;
   }
 
-  const enrichedTrips = useMemo(() =>
-    mockPastTrips.map((t) => reviews[t.id] ? { ...t, reviewed: true, myRating: reviews[t.id].rating } : t),
-    [reviews]
+  // Mark this booking as reviewed locally so the card flips immediately,
+  // without needing a full refetch of /my-bookings.
+  setBookings((prev) =>
+    prev.map((b) => (b.id === tripId ? { ...b, hasReviewed: true } : b))
   );
+}
+
+  
 
   const stats = useMemo(() => [
-    { icon: CalendarDays, label: "Upcoming trips", value: mockBookings.filter((b) => b.status === "upcoming" || b.status === "active").length, tab: "bookings" },
-    { icon: Wallet,       label: "Spent this year", value: `${(mockGuest.totalSpentETB / 1000).toFixed(0)}K ETB`, tab: "bookings" },
-  ], []);
+  { icon: CalendarDays, label: "Upcoming trips", value: upcomingBookings.length, tab: "bookings" },
+  { icon: Wallet,       label: "Spent this year", value: `${(mockGuest.totalSpentETB / 1000).toFixed(0)}K ETB`, tab: "bookings" },
+], [upcomingBookings]); 
 
   const sidebarLinks = [
-    { label: 'Overview', icon: LayoutGrid, tab: 'overview' },
-    { label: 'Bookings', icon: CalendarDays, tab: 'bookings', count: mockBookings.filter((b) => b.status === "upcoming" || b.status === "active").length },
-    { label: 'Past trips', icon: History, tab: 'trips', count: mockPastTrips.length },
-    { label: 'Profile Settings', icon: SettingsIcon, tab: 'settings' },
-  ];
+  { label: 'Overview', icon: LayoutGrid, tab: 'overview' },
+  { label: 'Bookings', icon: CalendarDays, tab: 'bookings', count: upcomingBookings.length },
+  { label: 'Past trips', icon: History, tab: 'trips', count: completedBookings.length },
+  { label: 'Profile Settings', icon: SettingsIcon, tab: 'settings' },
+];
 
   return (
     <div className="min-h-screen" style={{ background: STONE }}>
@@ -552,6 +586,11 @@ export default function Dashboard() {
             <PanelLeft size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
           </button>
         </div>
+        {reviewError && (
+  <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-xl shadow-lg">
+    {reviewError}
+  </div>
+)}
 
         {reviewTrip && (
           <ReviewModal
@@ -563,15 +602,22 @@ export default function Dashboard() {
 
         <main className="max-w-[1200px] mx-auto px-5 md:px-8 lg:px-10 pt-4 pb-24">
           {tab === "overview" && (
-            <>
-              <HeroBanner guestName={guestName} stats={stats} onStatClick={setTab} />
-              <OverviewTab onNav={setTab} onOpenReview={(trip) => setReviewTrip(trip)} />
-            </>
-          )}
-          {tab === "bookings" && <BookingsTab />}
-          {tab === "trips"    && <TripsTab onOpenReview={(trip) => setReviewTrip(trip)} enrichedTrips={enrichedTrips} />}
-          {tab === "settings" && <Profile guestName={guestName} guestEmail={user?.email} embedded />}
-        </main>
+  <>
+    <HeroBanner guestName={guestName} stats={stats} onStatClick={setTab} />
+    <OverviewTab bookings={bookings} onNav={setTab} onOpenReview={(trip) => setReviewTrip(trip)} />
+  </>
+)}
+{tab === "bookings" && (
+  <BookingsTab
+    bookings={bookings}
+    upcomingBookings={upcomingBookings}
+    completedBookings={completedBookings}
+    cancelledBookings={cancelledBookings}
+  />
+)}
+{tab === "trips" && <TripsTab bookings={bookings} onOpenReview={(trip) => setReviewTrip(trip)} />}
+{tab === "settings" && <Profile guestName={guestName} guestEmail={user?.email} embedded />}
+</main>
       </div>
     </div>
   );

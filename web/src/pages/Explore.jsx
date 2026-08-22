@@ -9,13 +9,25 @@ import {
 import Navbar from '../components/NavBar';
 import Footer from '../components/Footer';
 import Search from '../components/Search';
-import { allProperties } from '../data/properties';
+import { getListings } from '../lib/api';
 
 const Explore = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  const [allProperties, setAllProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getListings()
+      .then(({ status, body }) => {
+        if (status === 200) {
+          setAllProperties(body.data.listings);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
   const [location, setLocation] = useState('');
   const [guests, setGuests] = useState(2);
   const [sortBy, setSortBy] = useState('Recommended');
@@ -65,35 +77,26 @@ const Explore = () => {
     );
   };
 
-  const filteredProperties = useMemo(() => {
+    const filteredProperties = useMemo(() => {
     let result = allProperties.filter((property) => {
       const matchesLocation =
         !location.trim() ||
-        `${property.name} ${property.location}`
+        `${property.title} ${property.city} ${property.subCity}`
           .toLowerCase()
           .includes(location.trim().toLowerCase());
 
       const matchesType =
-        !selectedType || property.type.toLowerCase().includes(selectedType.toLowerCase());
+        !selectedType || property.category === selectedType.toLowerCase().replace(' ', '_');
 
-      const matchesBathroom =
-        !selectedBathroom ||
-        (selectedBathroom === '4+'
-          ? property.bathrooms >= 4
-          : property.bathrooms === Number(selectedBathroom));
-
-      const matchesAmenities =
-        selectedAmenities.length === 0 ||
-        selectedAmenities.every((amenity) =>
-          property.amenities.some((a) => a.toLowerCase().includes(amenity.toLowerCase()))
-        );
-
-      const matchesRating =
-        !selectedRating || property.rating >= Number(selectedRating);
+      // Bathrooms/amenities/rating aren't returned by GET /api/listings yet —
+      // these filters pass everything through until the backend adds them.
+      const matchesBathroom = true;
+      const matchesAmenities = true;
+      const matchesRating = true;
 
       const matchesPrice =
-        property.price >= priceRange[0] &&
-        property.price <= priceRange[1];
+        property.pricePerNight >= priceRange[0] &&
+        property.pricePerNight <= priceRange[1];
 
       return (
         matchesLocation &&
@@ -106,19 +109,19 @@ const Explore = () => {
     });
 
     if (sortBy === 'Price: low to high') {
-      result = [...result].sort((a, b) => a.price - b.price);
+      result = [...result].sort((a, b) => a.pricePerNight - b.pricePerNight);
     }
 
     if (sortBy === 'Price: high to low') {
-      result = [...result].sort((a, b) => b.price - a.price);
+      result = [...result].sort((a, b) => b.pricePerNight - a.pricePerNight);
     }
 
-    if (sortBy === 'Top rated') {
-      result = [...result].sort((a, b) => b.rating - a.rating);
-    }
+    // 'Top rated' has no real rating field to sort by yet — falls through
+    // to insertion order rather than crashing.
 
     return result;
   }, [
+    allProperties,
     location,
     selectedType,
     selectedBathroom,
@@ -305,55 +308,51 @@ const Explore = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-10">
                   {filteredProperties.map((property) => (
-                    <Link
-                      key={property.slug}
-                      to={`/property/${property.slug}`}
-                      className="group min-w-0 block"
-                    >
-                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 bg-stone-100">
-                        <img
-                          src={property.image}
-                          alt={`${property.name} in ${property.location}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+  <Link
+    key={property.id}
+    to={`/property/${property.id}`}
+    className="group min-w-0 block"
+  >
+    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 bg-stone-100">
+      <img
+        src={property.coverPhoto}
+        alt={`${property.title} in ${property.city}`}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      />
 
-                        <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white/95 text-[12px] font-semibold uppercase shadow-sm">
-                          {property.type}
-                        </div>
-                      </div>
+      <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white/95 text-[12px] font-semibold uppercase shadow-sm">
+        {property.category}
+      </div>
+    </div>
 
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-[17px] font-semibold leading-tight group-hover:text-primary transition-colors">
-                          {property.name}
-                        </h3>
+    <div className="flex items-start justify-between gap-3">
+      <h3 className="text-[17px] font-semibold leading-tight group-hover:text-primary transition-colors">
+        {property.title}
+      </h3>
 
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <Star
-                            size={15}
-                            className="fill-primary text-primary"
-                          />
-                          <span className="text-[14px] font-medium">
-                            {property.rating}
-                          </span>
-                          <span className="text-[14px] text-muted-foreground">
-                            ({property.reviews})
-                          </span>
-                        </div>
-                      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Star size={15} className="fill-primary text-primary" />
+        <span className="text-[14px] font-medium">
+          {property.rating ?? 'New'}
+        </span>
+        {property.reviews !== undefined && (
+          <span className="text-[14px] text-muted-foreground">
+            ({property.reviews})
+          </span>
+        )}
+      </div>
+    </div>
 
-                      <p className="text-[14px] text-muted-foreground mt-1">
-                        {property.location}
-                      </p>
+    <p className="text-[14px] text-muted-foreground mt-1">
+      {property.subCity}, {property.city}
+    </p>
 
-                      <p className="text-[15px] font-semibold mt-2">
-                        ETB {property.price.toLocaleString()}
-                        <span className="font-normal text-muted-foreground">
-                          {' '}
-                          / night
-                        </span>
-                      </p>
-                    </Link>
-                  ))}
+    <p className="text-[15px] font-semibold mt-2">
+      ETB {Number(property.pricePerNight).toLocaleString()}
+      <span className="font-normal text-muted-foreground"> / night</span>
+    </p>
+  </Link>
+))}
                 </div>
               )}
             </section>

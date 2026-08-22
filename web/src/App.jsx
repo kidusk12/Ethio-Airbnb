@@ -28,9 +28,8 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/stays" element={<Explore />} />
-          <Route path="/property/:slug" element={<PropertyDetail />} />
-          <Route path="/property" element={<PropertyDetail />} />
-          <Route path="/book/:slug" element={<Book />} />
+          <Route path="/property/:id" element={<PropertyDetail />} />
+          <Route path="/book/:id" element={<Book />} />
           <Route path="/book" element={<Book />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -41,7 +40,6 @@ function App() {
           <Route path="/guest_dashboard" element={<UserDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/about" element={<About />} />
           <Route path="/help" element={<Help />} />
           <Route path="/terms" element={<Terms />} />
         </Routes>
