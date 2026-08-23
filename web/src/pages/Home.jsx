@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Home as HomeIcon,
@@ -23,82 +23,40 @@ import Navbar from '../components/NavBar';
 import Footer from '../components/Footer';
 import Search from '../components/Search';
 import { useAuth } from '../context/AuthContext';
+import { getListings, resolveFileUrl } from '../lib/api';
 
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [favorites, setFavorites] = useState({});
 
-  const destinations = [
-    { name: 'Addis Ababa', stays: 312, image: aaImg },
-    { name: 'Hawassa', stays: 128, image: hawaImg },
-    { name: 'Bahir Dar', stays: 96, image: bahirImg },
-    { name: 'Lalibela', stays: 74, image: lalibelaImg },
-    { name: 'Dire Dawa', stays: 58, image: direImg },
-  ];
+  const [allListings, setAllListings] = useState([]);
 
-  const properties = [
-    {
-      slug: 'bole-skyline-suite',
-      name: 'Bole Skyline Suite',
-      type: 'Apartment',
-      rating: 4.92,
-      reviews: 168,
-      location: 'Bole, Addis Ababa',
-      price: 4800,
-      image: aaImg,
-    },
-    {
-      slug: 'hawassa-lake-villa',
-      name: 'Hawassa Lake Villa',
-      type: 'Villa',
-      rating: 4.87,
-      reviews: 94,
-      location: 'Lake Hawassa, Hawassa',
-      price: 9200,
-      image: hawaImg,
-    },
-    {
-      slug: 'lalibela-stone-guesthouse',
-      name: 'Lalibela Stone Guesthouse',
-      type: 'Guesthouse',
-      rating: 4.95,
-      reviews: 212,
-      location: 'Old Town, Lalibela',
-      price: 3400,
-      image: lalibelaImg,
-    },
-    {
-      slug: 'bahir-dar-garden-house',
-      name: 'Bahir Dar Garden House',
-      type: 'Hotel',
-      rating: 4.78,
-      reviews: 141,
-      location: 'Tana Lakeside, Bahir Dar',
-      price: 5600,
-      image: bahirImg,
-    },
-    {
-      slug: 'kazanchis-loft',
-      name: 'Kazanchis Design Loft',
-      type: 'Private room',
-      rating: 4.71,
-      reviews: 63,
-      location: 'Kazanchis, Addis Ababa',
-      price: 2200,
-      image: aaImg,
-    },
-    {
-      slug: 'dire-dawa-courtyard',
-      name: 'Dire Dawa Courtyard Stay',
-      type: 'Unique stay',
-      rating: 4.83,
-      reviews: 77,
-      location: 'Kezira, Dire Dawa',
-      price: 3900,
-      image: direImg,
-    },
-  ];
+  useEffect(() => {
+    getListings().then(({ status, body }) => {
+    if (status === 200) {
+      setAllListings(body.data.listings);
+    }
+  });
+}, []);
+
+  const properties = allListings.slice(0, 6);
+  
+  const cityInfo = {
+  'Addis Ababa': aaImg,
+  'Hawassa': hawaImg,
+  'Bahir Dar': bahirImg,
+  'Lalibela': lalibelaImg,
+  'Dire Dawa': direImg,
+};
+  
+  const destinations = Object.entries(cityInfo)
+  .map(([name, image]) => ({
+    name,
+    image,
+    stays: allListings.filter((p) => p.city === name).length,
+  }))
+  .filter((d) => d.stays > 0);
 
   const propertyTypes = [
     { label: 'Apartments', icon: Building, desc: 'Modern city flats' },
@@ -254,42 +212,44 @@ const Home = () => {
             <ChevronRight size={16} />
           </Link>
         </div>
-
+        {properties.length === 0 && (
+         <p className="text-muted-foreground text-[14px]">New stays are being added — check back soon.</p>
+)}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
           {properties.map((property) => (
-            <Link
-              key={property.slug}
-              to={`/property/${property.slug}`}
-              className="group block"
-            >
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 shadow-sm bg-stone-100">
-                <img
-                  src={property.image}
-                  alt={`${property.name} in ${property.location}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-foreground">
-                  {property.type}
-                </div>
-              </div>
+  <Link
+    key={property.id}
+    to={`/property/${property.id}`}
+    className="group block"
+  >
+    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3 shadow-sm bg-stone-100">
+      <img
+        src={resolveFileUrl(property.coverPhoto)}
+        alt={`${property.title} in ${property.city}`}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      />
+      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-foreground">
+        {property.category}
+      </div>
+    </div>
 
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <h3 className="text-[16px] font-bold text-foreground group-hover:text-primary transition-colors">
-                  {property.name}
-                </h3>
-                <div className="flex items-center gap-1">
-                  <Star size={14} className="fill-primary text-primary" />
-                  <span className="text-[14px] font-semibold">{property.rating}</span>
-                </div>
-              </div>
+    <div className="flex items-center justify-between gap-2 mb-1">
+      <h3 className="text-[16px] font-bold text-foreground group-hover:text-primary transition-colors">
+        {property.title}
+      </h3>
+      <div className="flex items-center gap-1">
+        <Star size={14} className="fill-primary text-primary" />
+        <span className="text-[14px] font-semibold">{property.rating ?? 'New'}</span>
+      </div>
+    </div>
 
-              <p className="text-[14px] text-muted-foreground mb-1.5">{property.location}</p>
-              <p className="text-[15px] font-bold text-foreground">
-                ETB {property.price.toLocaleString()}
-                <span className="font-normal text-muted-foreground text-[13px]"> / night</span>
-              </p>
-            </Link>
-          ))}
+    <p className="text-[14px] text-muted-foreground mb-1.5">{property.subCity}, {property.city}</p>
+    <p className="text-[15px] font-bold text-foreground">
+      ETB {Number(property.pricePerNight).toLocaleString()}
+      <span className="font-normal text-muted-foreground text-[13px]"> / night</span>
+    </p>
+  </Link>
+))}
         </div>
       </section>
 

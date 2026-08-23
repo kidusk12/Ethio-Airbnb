@@ -20,6 +20,8 @@ import NavBar1 from '../components/NavBar1';
 import Footer from '../components/Footer';
 import Calendar from '../components/Calendar';
 import { useAuth } from '../context/AuthContext';
+import { uploadFile, createListing, saveHostVerification } from '../lib/api';
+
 
 const STEPS = [
   { key: 'property-type', label: 'Property type' },
@@ -138,6 +140,23 @@ const HOUSE_RULES = [
   'No smoking indoors',
   'Pets not allowed',
 ];
+
+const PROPERTY_TYPE_TO_CATEGORY = {
+  'Apartments': 'apartment',
+  'Villas': 'villa',
+  'Hotels': 'hotel',
+  'Guesthouses': 'guesthouse',
+  'Private rooms': 'private_room',
+  'Unique stays': 'unique_stay',
+};
+
+// Only these four have a matching backend enum value right now.
+const AMENITY_TO_BACKEND = {
+  'Wi-Fi': 'wifi',
+  'Kitchen': 'kitchen',
+  'Free parking': 'free_parking',
+  'Washer': 'washer',
+};
 
 const List = () => {
   const navigate = useNavigate();
@@ -335,54 +354,65 @@ const List = () => {
   };
 
   // Handle Publish Listing
-  const handlePublishListing = () => {
-    if (!formData.agreedToTerms) {
-      setStepError('You must read and agree to the Ethio-Airbnb Terms & Conditions to publish.');
+  const { token } = useAuth();
+
+const handlePublishListing = async () => {
+  if (!formData.agreedToTerms) {
+    setStepError('You must read and agree to the Ethio-Airbnb Terms & Conditions to publish.');
+    return;
+  }
+
+  setStepError('');
+
+  try {
+    // Step A: upload the host's ID document (one-time, reused for future listings)
+    const idUploadRes = await uploadFile(formData.idDocument, token);
+    if (idUploadRes.status !== 201) throw new Error('ID upload failed');
+    await saveHostVerification(idUploadRes.body.data.url, token);
+
+    // Step B: upload the house deed
+    const deedUploadRes = await uploadFile(formData.houseDeed, token);
+    if (deedUploadRes.status !== 201) throw new Error('House deed upload failed');
+
+    // Step C: upload every property photo
+    const photoUrls = [];
+    for (const photo of formData.propertyPhotos) {
+      const photoRes = await uploadFile(photo.file, token);
+      if (photoRes.status !== 201) throw new Error('Photo upload failed');
+      photoUrls.push(photoRes.body.data.url);
+    }
+
+    // Step D: create the actual listing, now that every file has a real URL
+    const listingRes = await createListing({
+            category: PROPERTY_TYPE_TO_CATEGORY[formData.propertyType],
+      city: formData.city,
+      subCity: formData.subCity,
+      streetAddress: formData.streetAddress,
+      houseDeedPhotoUrl: deedUploadRes.body.data.url,
+      photos: photoUrls,
+      title: formData.listingTitle,
+      description: formData.description,
+           amenities: formData.amenities
+        .map((a) => AMENITY_TO_BACKEND[a])
+        .filter(Boolean), // drops any amenity the backend doesn't support yet
+      bedrooms: formData.bedrooms,
+      bathrooms: formData.bathrooms,
+      maxGuests: formData.guests,
+      pricePerNight: Number(formData.nightlyPrice),
+      houseRules: [...formData.houseRules, ...formData.customRules],
+      agreedToTerms: true,
+    }, token);
+
+    if (listingRes.status !== 201) {
+      setStepError(listingRes.body.message || 'Failed to publish listing.');
       return;
     }
 
-    const newListing = {
-      id: 'prop_' + Date.now(),
-      title: formData.listingTitle || `${formData.propertyType} in ${formData.subCity}`,
-      name: formData.listingTitle || `${formData.propertyType} in ${formData.subCity}`,
-      type: formData.propertyType,
-      city: formData.city,
-      subCity: formData.subCity,
-      location: `${formData.subCity}, ${formData.city}`,
-      address: formData.streetAddress,
-      price: Number(formData.nightlyPrice),
-      pricePerNight: Number(formData.nightlyPrice),
-      nightlyPrice: Number(formData.nightlyPrice),
-      guests: formData.guests,
-      bedrooms: formData.bedrooms,
-      beds: formData.beds,
-      bathrooms: formData.bathrooms,
-      amenities: formData.amenities,
-      houseRules: [...formData.houseRules, ...formData.customRules],
-      blockedDates: formData.blockedDates,
-      rating: 5.0,
-      reviews: 0,
-      createdAt: new Date().toISOString(),
-      image: formData.propertyPhotos[0]?.preview || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267',
-      bankDetails: {
-        bankName: formData.bankName,
-        accountHolderName: formData.accountHolderName,
-        accountNumber: formData.accountNumber,
-      },
-    };
-
-    try {
-      const existing = JSON.parse(localStorage.getItem('hostListings') || '[]');
-      existing.unshift(newListing);
-      localStorage.setItem('hostListings', JSON.stringify(existing));
-      localStorage.setItem('properties', JSON.stringify(existing));
-    } catch {
-      // ignore
-    }
-
     navigate('/host/Host_dashboard');
-  };
-
+  } catch (err) {
+    setStepError('Something went wrong publishing your listing. Please try again.');
+  }
+};
   const progressPercent = ((currentStep + 1) / STEPS.length) * 100;
   const currentSubcities = formData.city ? (CITY_SUBCITIES[formData.city] || []) : [];
 

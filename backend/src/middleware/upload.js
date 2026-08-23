@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import multer from 'multer';
+import ApiError from '../utils/ApiError.js';
 
 const uploadDirectory = path.resolve(process.cwd(), 'uploads');
 
@@ -21,13 +22,13 @@ const allowedMimeTypes = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
-  'application/pdf', // host wizard accepts image/*,.pdf for ID document + house deed
+  'application/pdf',
 ]);
 
 function fileFilter(req, file, callback) {
   if (!allowedMimeTypes.has(file.mimetype)) {
     return callback(
-      new Error('Only JPG, PNG, WEBP, or PDF files are allowed.'),
+      new ApiError(400, 'Only JPG, PNG, WEBP, or PDF files are allowed.'),
     );
   }
 

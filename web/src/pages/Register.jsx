@@ -31,7 +31,7 @@ function Register() {
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!formData.firstName.trim()) {
       setError("Please enter your first name.");
@@ -50,16 +50,61 @@ function Register() {
       return;
     }
 
-    const userData = {
-      firstName: formData.firstName.trim(),
-      name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      role,
-    };
+    try {
+      const registerResponse = await fetch("http://localhost:4000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: formData.firstName.trim(),
+          middleName: formData.middleName.trim() || undefined,
+          lastName: formData.lastName.trim(),
+          phoneNumber: formData.phone.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          role,
+        }),
+      });
 
-    login(userData, "mock_token_" + Date.now());
-    navigate(redirectPath, { replace: true });
+      const registerResult = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        setError(registerResult?.message || "Could not create account.");
+        return;
+      }
+
+      // Register succeeded but doesn't auto-login (per API contract) — log in separately.
+      const loginResponse = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password,
+        }),
+      });
+
+      const loginResult = await loginResponse.json();
+
+      if (!loginResponse.ok) {
+        setError("Account created, but automatic login failed. Please log in.");
+        navigate("/login", { replace: true });
+        return;
+      }
+
+            const { user, token } = loginResult.data;
+
+      login(user, token);
+
+      const roleHome = {
+        guest: "/guest_dashboard",
+        host: "/host/Host_dashboard",
+        admin: "/admin",
+      };
+
+      const destination = location.state?.from || roleHome[user.role] || "/";
+      navigate(destination, { replace: true });
+    } catch (err) {
+      setError("Could not reach the server. Please try again.");
+    }
   };
 
   return (

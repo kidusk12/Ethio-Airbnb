@@ -1,85 +1,96 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  Star,
-  MapPin,
-  Share2,
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  X,
+  Star, MapPin, Share2, Calendar as CalendarIcon,
+  ChevronLeft, ChevronRight, CheckCircle, X,
 } from 'lucide-react';
 import Navbar from '../components/NavBar';
 import Footer from '../components/Footer';
 import Calendar from '../components/Calendar';
-import { allProperties } from '../data/properties';
+import { getListingDetail, getListingReviews, resolveFileUrl } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 const PropertyDetail = () => {
-  const { slug } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [property, setProperty] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [slug]);
+    setLoading(true);
+    setNotFound(false);
 
-  // Find property by slug, fallback to hawassa-lake-villa if not found
-  const property = useMemo(() => {
-    const found = allProperties.find((p) => p.slug === slug);
-    return found || allProperties[0];
-  }, [slug]);
+    getListingDetail(id).then(({ status, body }) => {
+      if (status === 200) {
+        setProperty(body.data);
+      } else {
+        setNotFound(true);
+      }
+      setLoading(false);
+    });
 
-  // Date selection state
-  const [checkIn, setCheckIn] = useState('2026-09-12');
-  const [checkOut, setCheckOut] = useState('2026-09-16');
+    getListingReviews(id).then(({ status, body }) => {
+      if (status === 200) setReviews(body.data.reviews);
+    });
+  }, [id]);
+
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
   const [guestsCount, setGuestsCount] = useState(2);
-  const [showCalendar, setShowCalendar] = useState(false);
   const [activePhotoModal, setActivePhotoModal] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
-  // Today's date string for min attribute (YYYY-MM-DD) — use local time not UTC
   const todayStr = (() => {
     const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   })();
 
-  // Calculate nights
   const nights = useMemo(() => {
     try {
-      const inDate = new Date(checkIn);
-      const outDate = new Date(checkOut);
-      const diffTime = outDate - inDate;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
       return diffDays > 0 ? diffDays : 4;
     } catch {
       return 4;
     }
   }, [checkIn, checkOut]);
 
-  const basePrice = property.price * nights;
-  const cleaningFee = Math.round(property.price * 0.12);
-  const serviceFee = Math.round(property.price * 0.15);
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
+  }
+
+  if (notFound || !property) {
+    return <div className="min-h-screen flex items-center justify-center">Listing not found.</div>;
+  }
+
+  const basePrice = property.pricePerNight * nights;
+  const cleaningFee = Math.round(property.pricePerNight * 0.12);
+  const serviceFee = Math.round(property.pricePerNight * 0.15);
   const totalPrice = basePrice + cleaningFee + serviceFee;
-
+  const hostFullName = [property.hostFirstName, property.hostLastName].filter(Boolean).join(' ');
   const handleReserve = () => {
-    const bookingPath = `/book/${property.slug}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guestsCount}`;
+  if (!checkIn || !checkOut) {
+    alert('Please select check-in and check-out dates.');
+    return;
+  }
 
-    if (!user) {
-      // Not logged in — send to Login, remembering where to come back to.
-      // Login.jsx reads location.state.from and navigates there after a
-      // successful login (email/password or Google).
-      navigate('/login', { state: { from: bookingPath } });
-      return;
-    }
+  const bookingPath = `/book/${property.id}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guestsCount}`;
 
-    navigate(bookingPath);
-  };
+  if (!user) {
+    // Not logged in — send to Login, remembering where to come back to.
+    // Login.jsx reads location.state.from and navigates there after a
+    // successful login (email/password or Google).
+    navigate('/login', { state: { from: bookingPath } });
+    return;
+  }
+
+  navigate(bookingPath);
+};
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans flex flex-col">
@@ -156,8 +167,8 @@ const PropertyDetail = () => {
             </div>
 
             {/* Sub images */}
-            {property.gallery &&
-              property.gallery.slice(1, 5).map((imgSrc, idx) => (
+            {property.photos &&
+  property.photos.slice(1, 5).map((imgSrc, idx) => (
                 <div
                   key={idx}
                   className="hidden md:block relative cursor-pointer group overflow-hidden"
@@ -168,7 +179,7 @@ const PropertyDetail = () => {
                 >
                   <img
                     src={imgSrc}
-                    alt={`${property.name} ${idx + 2}`}
+                    alt={`${property.title} ${idx + 2}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
@@ -189,15 +200,14 @@ const PropertyDetail = () => {
               <div className="pb-8 border-b border-border">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 rounded-full bg-primary text-white font-bold flex items-center justify-center text-lg shadow-sm flex-shrink-0">
-                    {property.host.name.charAt(0)}
+                    {hostFullName.charAt(0)}
                   </div>
                   <div>
                     <h2 className="font-serif text-2xl font-bold">
-                      {property.type} hosted by {property.host.name}
+                      {property.type} hosted by {hostFullName}
                     </h2>
                     <p className="text-xs text-primary font-semibold">
-                      {property.host.joined} {property.host.superhost && '· ★ Superhost'}
-                    </p>
+                      </p>
                   </div>
                 </div>
                 <p className="text-muted-foreground text-[15px]">
@@ -214,14 +224,16 @@ const PropertyDetail = () => {
                 <div className="p-6 bg-white border border-border rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                   <div>
                     <h3 className="font-semibold text-lg mb-1">{nights} nights in {property.location}</h3>
-                    <p className="text-sm text-muted-foreground">12 Sep 2026 – 16 Sep 2026</p>
-                  </div>
-                  <Calendar
-                    selectedDate={new Date('2026-09-12')}
-                    rangeStart={new Date('2026-09-12')}
-                    rangeEnd={new Date('2026-09-16')}
-                    className="w-full sm:w-[280px]"
-                  />
+                    <p className="text-sm text-muted-foreground">
+  {checkIn && checkOut ? `${checkIn} – ${checkOut}` : 'Select your dates below'}
+</p>
+</div>
+<Calendar
+  selectedDate={checkIn ? new Date(checkIn) : undefined}
+  rangeStart={checkIn ? new Date(checkIn) : undefined}
+  rangeEnd={checkOut ? new Date(checkOut) : undefined}
+  className="w-full sm:w-[280px]"
+/>
                 </div>
               </div>
 
@@ -269,19 +281,19 @@ const PropertyDetail = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {property.reviewList.map((review, idx) => (
-                    <div key={idx} className="p-5 rounded-2xl bg-stone-50 border border-border">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-[15px] text-foreground">{review.author}</span>
-                        <span className="text-xs text-muted-foreground">{review.date}</span>
-                      </div>
+                  {reviews.map((review, idx) => (
+  <div key={idx} className="p-5 rounded-2xl bg-stone-50 border border-border">
+    <div className="flex items-center justify-between mb-2">
+      <span className="font-bold text-[15px] text-foreground">{review.guestName}</span>
+      <span className="text-xs text-muted-foreground">{new Date(review.createdAt).toLocaleDateString()}</span>
+    </div>
                       <div className="flex items-center gap-1 mb-2">
                         {[...Array(5)].map((_, i) => (
                           <Star key={i} size={13} className="fill-amber-400 text-amber-400" />
                         ))}
                       </div>
                       <p className="text-[14px] text-muted-foreground leading-relaxed">
-                        "{review.content}"
+                        "{review.text}"
                       </p>
                     </div>
                   ))}
@@ -294,7 +306,7 @@ const PropertyDetail = () => {
               <div className="flex items-baseline justify-between mb-6 pb-4 border-b border-border">
                 <div>
                   <span className="font-serif text-2xl font-bold text-foreground">
-                    ETB {property.price.toLocaleString()}
+                    ETB {property.pricePerNight.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground text-sm"> / night</span>
                 </div>
@@ -371,7 +383,7 @@ const PropertyDetail = () => {
               <div className="space-y-3 text-[14px] text-muted-foreground pb-5 border-b border-border">
                 <div className="flex justify-between">
                   <span className="underline">
-                    ETB {property.price.toLocaleString()} x {nights} nights
+                    ETB {property.pricePerNight.toLocaleString()} x {nights} nights
                   </span>
                   <span className="text-foreground font-medium">
                     ETB {basePrice.toLocaleString()}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -22,6 +22,7 @@ import {
 import NavBar1 from '../components/NavBar1';
 import Calendar from '../components/Calendar';
 import { useAuth } from '../context/AuthContext';
+import { getMyListings, getHostBookings, getListingReviews } from '../lib/api';
 
 const getStoredArray = (keys) => {
   for (const key of keys) {
@@ -58,7 +59,7 @@ function StatCard({ label, value, helper, icon: Icon }) {
 
 function Host_dashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
 
   const [activeTab, setActiveTab] = useState('Overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -83,51 +84,73 @@ function Host_dashboard() {
   const initialLetter = hostFirstName.charAt(0).toUpperCase() || 'H';
 
   // Load listings from localStorage or fallback
-  const [listings, setListings] = useState(() => {
-    const stored = getStoredArray(['hostListings', 'properties', 'listings']);
-    if (stored.length > 0) return stored;
-    return [
-      {
-        id: 'bole-skyline-suite',
-        title: 'Bole Skyline Luxury Suite',
-        name: 'Bole Skyline Luxury Suite',
-        type: 'Apartment',
-        city: 'Addis Ababa',
-        subCity: 'Bole',
-        location: 'Bole, Addis Ababa',
-        price: 4800,
-        nightlyPrice: 4800,
-        rating: 4.92,
-        reviews: 18,
-        status: 'Active',
-      },
-    ];
-  });
+  const [listings, setListings] = useState([]);
+const [listingsLoading, setListingsLoading] = useState(true);
+const [listingsError, setListingsError] = useState('');
 
-  const bookings = [
-    {
-      id: 'bk-101',
-      guestName: 'Dawit Mekonnen',
-      propertyName: listings[0]?.title || 'Bole Skyline Suite',
-      dates: 'Aug 22 – Aug 26, 2026',
-      amount: 19200,
-      status: 'Confirmed',
-    },
-    {
-      id: 'bk-102',
-      guestName: 'Hana Girma',
-      propertyName: listings[0]?.title || 'Bole Skyline Suite',
-      dates: 'Sep 01 – Sep 04, 2026',
-      amount: 14400,
-      status: 'Upcoming',
-    },
-  ];
+useEffect(() => {
+  async function loadListings() {
+    setListingsLoading(true);
+    setListingsError('');
+    const { status, body } = await getMyListings(token);
+    if (status !== 200) {
+      setListingsError(body?.message || 'Failed to load your listings.');
+      setListingsLoading(false);
+      return;
+    }
+    setListings(body.data?.listings || body.listings || []);
+    setListingsLoading(false);
+  }
+  if (token) loadListings();
+}, [token]);
+
+const [bookings, setBookings] = useState([]);
+
+useEffect(() => {
+  async function loadBookings() {
+    const { status, body } = await getHostBookings(token);
+    if (status !== 200) return;
+    setBookings(body.data?.bookings || body.bookings || []);
+  }
+  if (token) loadBookings();
+}, [token]);
 
   const totalEarnings = useMemo(() => {
     return listings.reduce((sum, item) => sum + (Number(item.price || item.nightlyPrice || 0) * 8), 42600);
   }, [listings]);
 
-  const reviewScore = 4.92;
+const [reviewScore, setReviewScore] = useState(null);
+
+useEffect(() => {
+  async function loadReviews() {
+    if (listings.length === 0) return;
+    const results = await Promise.all(
+      listings.map((l) => getListingReviews(l.id))
+    );
+    const allRatings = results.flatMap((r) => {
+      const reviews = r.body?.reviews || [];
+      return reviews.map((rev) => rev.rating);
+    });
+    if (allRatings.length === 0) return;
+    const avg = allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length;
+    setReviewScore(avg);
+  }
+  loadReviews();
+}, [listings]);
+
+const [allReviews, setAllReviews] = useState([]);
+
+useEffect(() => {
+  async function loadAllReviews() {
+    if (listings.length === 0) return;
+    const results = await Promise.all(
+      listings.map((l) => getListingReviews(l.id))
+    );
+    const combined = results.flatMap((r) => r.body?.reviews || []);
+    setAllReviews(combined);
+  }
+  loadAllReviews();
+}, [listings]);
 
   const goToNewProperty = () => {
     navigate('/host/list');
@@ -326,8 +349,7 @@ function Host_dashboard() {
 
             <StatCard
               label="Host rating score"
-              value={reviewScore.toFixed(2)}
-              helper="Based on guest reviews"
+value={reviewScore !== null ? reviewScore.toFixed(2) : 'No ratings yet'}              helper="Based on guest reviews"
               icon={Star}
             />
           </div>
@@ -383,9 +405,9 @@ function Host_dashboard() {
                           <Building2 size={22} />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-[15px] text-foreground truncate">
-                            {listing.title || listing.name}
-                          </p>
+                          <p className="font-bold text-[14px] text-foreground">
+  {listing.title || listing.name}
+</p>
                           <p className="text-[13px] text-muted-foreground truncate">
                             {listing.location || `${listing.subCity}, ${listing.city}`} · {listing.type}
                           </p>
@@ -394,8 +416,7 @@ function Host_dashboard() {
 
                       <div className="text-right flex-shrink-0">
                         <p className="font-bold text-[15px] text-foreground">
-                          ETB {Number(listing.price || listing.nightlyPrice || 0).toLocaleString()}
-                          <span className="text-[12px] font-normal text-muted-foreground">/nt</span>
+ETB {Number(listing.pricePerNight || listing.price || listing.nightlyPrice || 0).toLocaleString()}                          <span className="text-[12px] font-normal text-muted-foreground">/nt</span>
                         </p>
                         <span className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[11px] font-bold">
                           Active
@@ -423,7 +444,7 @@ function Host_dashboard() {
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-bold text-[14px] text-foreground">{booking.guestName}</p>
                         <span className="font-bold text-[14px] text-primary">
-                          ETB {booking.amount.toLocaleString()}
+                         ETB {(booking.amount ?? booking.totalPrice ?? booking.price ?? 0).toLocaleString()}
                         </span>
                       </div>
                       <p className="text-[12px] text-muted-foreground flex items-center gap-1.5">
@@ -481,8 +502,7 @@ function Host_dashboard() {
 
                       <div className="flex items-center justify-between pt-3 border-t border-border">
                         <p className="text-[16px] font-bold text-primary">
-                          ETB {Number(listing.price || listing.nightlyPrice || 0).toLocaleString()}
-                          <span className="text-[12px] font-normal text-muted-foreground"> / night</span>
+ETB {Number(listing.pricePerNight || listing.price || listing.nightlyPrice || 0).toLocaleString()}                          <span className="text-[12px] font-normal text-muted-foreground"> / night</span>
                         </p>
 
                         <button
@@ -513,27 +533,29 @@ function Host_dashboard() {
                     Guest Reviews & Feedback
                   </h2>
                   <p className="text-[14px] text-muted-foreground">
-                    Overall rating score: <strong>4.92 / 5.0</strong>
-                  </p>
+                    Read what guests have said about their stay.
+                    Overall rating score: <strong>{reviewScore !== null ? reviewScore.toFixed(2) : 'No ratings yet'} / 5.0</strong>                  </p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {[
-                  { name: 'Bethlehem Alemu', comment: 'Wonderful host! The apartment was spotless and exactly as described in Bole.', date: 'Aug 2026', rating: 5 },
-                  { name: 'Michael Jenkins', comment: 'Fast Wi-Fi, great location, and very responsive communication. Will stay again.', date: 'Jul 2026', rating: 5 },
-                ].map((rev, i) => (
+                {allReviews.length === 0 && (
+                   <p className="text-[14px] text-muted-foreground">No reviews yet.</p>
+                 )}
+                 {allReviews.map((rev, i) => (
+  
                   <div key={i} className="p-5 rounded-2xl border border-border bg-gray-50/50">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="font-bold text-[15px] text-foreground">{rev.name}</p>
-                      <div className="flex items-center gap-1">
+                        <p className="font-bold text-[15px] text-foreground">{rev.guestName}</p>                      <div className="flex items-center gap-1">
                         <Star size={14} className="fill-amber-400 text-amber-400" />
                         <span className="text-[13px] font-bold">{rev.rating}.0</span>
                       </div>
                     </div>
-                    <p className="text-[14px] text-muted-foreground">{rev.comment}</p>
-                    <p className="text-[12px] text-muted-foreground/80 mt-2">{rev.date}</p>
-                  </div>
+   <p className="text-[14px] text-muted-foreground">{rev.text}</p>
+<p className="text-[12px] text-muted-foreground/80 mt-2">
+  {new Date(rev.createdAt).toLocaleDateString()}
+</p>
+            </div>
                 ))}
               </div>
             </section>

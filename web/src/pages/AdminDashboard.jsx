@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X,
@@ -30,6 +30,8 @@ import {
 import NavBar1 from '../components/NavBar1';
 import { useAuth } from '../context/AuthContext';
 import Profile from './Profile';
+import { getPendingListings, approveListing, rejectListing, getPendingPayments, confirmPayment, rejectPayment, resolveFileUrl, getAllListingsAdmin, getDuePayouts, markPayoutPaid, getAllTransactions } from '../lib/api';
+
 
 // Color theme
 const A = "#E8473F";
@@ -42,6 +44,15 @@ const STATUS_COLORS = {
   Pending: '#f59e0b',
   Rejected: A,
 };
+
+function timeAgo(dateString) {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 function OverviewCard({ label, value, helper, icon: Icon, tone = 'primary', changeLabel, changePositive }) {
   const iconWrapClass =
@@ -80,192 +91,257 @@ function OverviewCard({ label, value, helper, icon: Icon, tone = 'primary', chan
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, token } = useAuth();
   
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'listings', 'payments', 'payouts', 'transactions', 'profile'
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 1. Listings Approval State
-  const [listings, setListings] = useState([
-    {
-      id: 'l1',
-      title: 'Modern 2BR Apartment, Bole',
-      host: 'Selam Tesfaye',
-      filesCount: 3,
-      submitted: '3h ago',
-      status: 'Pending',
-    },
-    {
-      id: 'l2',
-      title: 'Cozy Studio near Plazza',
-      host: 'Dawit Bekele',
-      filesCount: 1,
-      submitted: '1d ago',
-      status: 'Pending',
-    },
-    {
-      id: 'l3',
-      title: 'Traditional Compound House, CMC',
-      host: 'Selam Tesfaye',
-      filesCount: 4,
-      submitted: '40m ago',
-      status: 'Pending',
-    },
-    {
-      id: 'l4',
-      title: 'Lakeview Villa, Bishoftu',
-      host: 'Meron Alemu',
-      filesCount: 1,
-      submitted: '3d ago',
-      status: 'Approved',
-    },
-  ]);
+    const [listings, setListings] = useState([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [listingsError, setListingsError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchPendingListings() {
+      setListingsLoading(true);
+      setListingsError('');
+      try {
+        const { status, body } = await getPendingListings(token);
+        if (!isMounted) return;
+
+        if (status !== 200) {
+          setListingsError(body?.message || 'Failed to load pending listings.');
+          return;
+        }
+
+        const mapped = body.data.listings.map((item) => ({
+          id: item.id,
+          title: item.listing.title,
+          host: item.host.name,
+          filesCount: item.listing.photos.length + (item.listing.houseDeedPhotoUrl ? 1 : 0),
+          submitted: timeAgo(item.createdAt),
+          status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+        }));
+
+        setListings(mapped);
+      } catch (err) {
+        if (isMounted) setListingsError('Could not reach the server.');
+      } finally {
+        if (isMounted) setListingsLoading(false);
+      }
+    }
+
+    fetchPendingListings();
+    return () => { isMounted = false; };
+  }, [token]);
+  const [allListingsCount, setAllListingsCount] = useState(0);
+
+useEffect(() => {
+  getAllListingsAdmin(token).then(({ status, body }) => {
+    if (status === 200) {
+      setAllListingsCount(body.data.listings.length);
+    }
+  });
+}, [token]);
 
   // 2. Payments Verification State
-  const [payments, setPayments] = useState([
-    {
-      id: 'pay1',
-      title: 'Modern 2BR Apartment, Bole',
-      host: 'Selam Tesfaye',
-      guest: 'Nahom Girma',
-      amount: 4200.00,
-      slaWarning: 'Past 1hr SLA — needs attention',
-      refCode: '',
-      status: 'Pending',
-    },
-    {
-      id: 'pay2',
-      title: 'Cozy Studio near Piazza',
-      host: 'Dawit Bekele',
-      guest: 'Rediet Solomon',
-      amount: 1800.00,
-      slaWarning: 'Past 1hr SLA — needs attention',
-      refCode: '',
-      status: 'Pending',
-    },
-    {
-      id: 'pay3',
-      title: 'Lakeview Villa, Bishoftu',
-      host: 'Meron Alemu',
-      guest: 'Fasika Yohannes',
-      amount: 6100.00,
-      slaWarning: '',
-      refCode: '',
-      status: 'Pending',
-    },
-  ]);
+  const [payments, setPayments] = useState([]);
+const [paymentsLoading, setPaymentsLoading] = useState(true);
+const [paymentsError, setPaymentsError] = useState('');
 
+useEffect(() => {
+  let isMounted = true;
+
+  async function fetchPendingPayments() {
+    setPaymentsLoading(true);
+    setPaymentsError('');
+    try {
+      const { status, body } = await getPendingPayments(token);
+      if (!isMounted) return;
+
+      if (status !== 200) {
+        setPaymentsError(body?.message || 'Failed to load pending payments.');
+        return;
+      }
+
+      const now = Date.now();
+      const mapped = body.data.payments.map((p) => {
+        const deadlinePassed = new Date(p.paymentDeadline).getTime() < now;
+        return {
+          id: p.paymentId,
+          bookingId: p.bookingId,
+          title: p.listingTitle,
+          host: p.hostName,
+          guest: p.guestName,
+          amount: p.amount,
+          receiptImageUrl: p.receiptImageUrl,
+          slaWarning: deadlinePassed ? 'Past payment deadline — needs attention' : '',
+          refCode: '',
+          status: 'Pending',
+        };
+      });
+
+      setPayments(mapped);
+    } catch (err) {
+      if (isMounted) setPaymentsError('Could not reach the server.');
+    } finally {
+      if (isMounted) setPaymentsLoading(false);
+    }
+  }
+
+  fetchPendingPayments();
+  return () => { isMounted = false; };
+}, [token]);
+ 
   // 3. Payouts Due State
-  const [payouts, setPayouts] = useState([
-    {
-      id: 'payout1',
-      host: 'Meron Alemu',
-      amount: 2975.00,
-      total: 3500.00,
-      commissionPercent: 15,
-      commissionAmount: 525.00,
-      slaText: '15h 32m left',
-      isWarning: false,
-      refCode: '',
-      status: 'Pending',
-    },
-    {
-      id: 'payout2',
-      host: 'Dawit Bekele',
-      amount: 1870.00,
-      total: 2200.00,
-      commissionPercent: 15,
-      commissionAmount: 330.00,
-      slaText: 'Past 24hr SLA — pay host now',
-      isWarning: true,
-      refCode: '',
-      status: 'Pending',
-    },
-    {
-      id: 'payout3',
-      host: 'Selam Tesfaye',
-      amount: 4400.00,
-      total: 5000.00,
-      commissionPercent: 12,
-      commissionAmount: 600.00,
-      slaText: 'Past 24hr SLA — pay host now',
-      isWarning: true,
-      refCode: '',
-      status: 'Pending',
-    },
-  ]);
+    const [payouts, setPayouts] = useState([]);
+const [payoutsLoading, setPayoutsLoading] = useState(true);
+const [payoutsError, setPayoutsError] = useState('');
+
+useEffect(() => {
+  let isMounted = true;
+
+  async function fetchDuePayouts() {
+    setPayoutsLoading(true);
+    setPayoutsError('');
+    try {
+      const { status, body } = await getDuePayouts(token);
+      if (!isMounted) return;
+
+      if (status !== 200) {
+        setPayoutsError(body?.message || 'Failed to load due payouts.');
+        return;
+      }
+
+      const now = Date.now();
+      const mapped = body.data.payouts.map((p) => {
+        const confirmedAt = new Date(p.paymentConfirmedAt).getTime();
+        const deadline = confirmedAt + 24 * 60 * 60 * 1000; // 24h window per contract
+        const msLeft = deadline - now;
+        const isWarning = msLeft <= 0;
+        const hoursLeft = Math.floor(Math.abs(msLeft) / (60 * 60 * 1000));
+        const minsLeft = Math.floor((Math.abs(msLeft) % (60 * 60 * 1000)) / (60 * 1000));
+
+        return {
+          id: p.payoutId,
+          bookingId: p.bookingId,
+          host: p.hostName,
+          amount: p.amount,
+          slaText: isWarning
+            ? 'Past 24hr SLA — pay host now'
+            : `${hoursLeft}h ${minsLeft}m left`,
+          isWarning,
+          refCode: '',
+          status: 'Pending',
+        };
+      });
+
+      setPayouts(mapped);
+    } catch (err) {
+      if (isMounted) setPayoutsError('Could not reach the server.');
+    } finally {
+      if (isMounted) setPayoutsLoading(false);
+    }
+  }
+
+  fetchDuePayouts();
+  return () => { isMounted = false; };
+}, [token]);
 
   // 4. Transaction Log State
-  const [transactions, setTransactions] = useState([
-    {
-      id: 'tx1',
-      type: 'Payout',
-      recipient: 'Meron Alemu',
-      code: 'ETB-OUT-20260812-9002',
-      amount: 2975.00,
-      timestamp: '2026-08-18 18:09:46',
-    },
-    {
-      id: 'tx2',
-      type: 'Payment',
-      sender: 'Betelhem Aklilu',
-      code: 'ETB-PAY-20260810-9001',
-      amount: 3500.00,
-      timestamp: '2026-08-17 18:09:46',
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+const [transactionsLoading, setTransactionsLoading] = useState(true);
+const [transactionsError, setTransactionsError] = useState('');
 
+useEffect(() => {
+  let isMounted = true;
+
+  getAllTransactions(token).then(({ status, body }) => {
+    if (!isMounted) return;
+    if (status !== 200) {
+      setTransactionsError(body?.message || 'Failed to load transactions.');
+      setTransactionsLoading(false);
+      return;
+    }
+
+    const mapped = body.data.transactions.map((t) => ({
+      id: t.id,
+      type: t.type === 'hostPayout' ? 'Payout' : 'Payment',
+      recipient: t.type === 'hostPayout' ? t.counterpartyName : undefined,
+      sender: t.type === 'userPayment' ? t.counterpartyName : undefined,
+      code: t.transactionCode,
+      amount: t.amount,
+      timestamp: new Date(t.timestamp).toISOString().replace('T', ' ').slice(0, 19),
+    }));
+
+    setTransactions(mapped);
+    setTransactionsLoading(false);
+  }).catch(() => {
+    if (isMounted) {
+      setTransactionsError('Could not reach the server.');
+      setTransactionsLoading(false);
+    }
+  });
+
+  return () => { isMounted = false; };
+}, [token]);
   // Helper actions
-  const handleApproveListing = (id) => {
-    setListings(prev =>
-      prev.map(item => item.id === id ? { ...item, status: 'Approved' } : item)
-    );
+    const handleApproveListing = async (id) => {
+    const { status, body } = await approveListing(id, token);
+    if (status !== 200) {
+      setListingsError(body?.message || 'Failed to approve listing.');
+      return;
+    }
+    setListings(prev => prev.filter(item => item.id !== id));
   };
+  const handleRejectListing = async (id) => {
+  const { status, body } = await rejectListing(id, token);
+  if (status !== 200) {
+    setListingsError(body?.message || 'Failed to reject listing.');
+    return;
+  }
+  setListings(prev => prev.filter(item => item.id !== id));
+};
+  const handleRejectPayment = async (id) => {
+  const { status, body } = await rejectPayment(id, token);
+  if (status !== 200) {
+    setPaymentsError(body?.message || 'Failed to reject payment.');
+    return;
+  }
+  setPayments(prev => prev.filter(p => p.id !== id));
+};
 
-  const handleRejectListing = (id) => {
-    setListings(prev =>
-      prev.map(item => item.id === id ? { ...item, status: 'Rejected' } : item)
-    );
-  };
+ const handleConfirmPayment = async (id) => {
+  const payment = payments.find(p => p.id === id);
+  if (!payment || !payment.refCode.trim()) return;
 
-  const handleConfirmPayment = (id) => {
-    const payment = payments.find(p => p.id === id);
-    if (!payment) return;
+  const { status, body } = await confirmPayment(id, payment.refCode.trim(), token);
+  if (status !== 200) {
+    setPaymentsError(body?.message || 'Failed to confirm payment.');
+    return;
+  }
+
+  setPayments(prev => prev.filter(p => p.id !== id));
+  // Real transaction log now comes from the backend — no local push needed here.
+};
+
+  
+
+  const handleMarkPaid = async (id) => {
     
-    // Add to transaction log
-    const code = payment.refCode.trim() || `ETB-PAY-${Date.now().toString().slice(-6)}`;
-    const newTx = {
-      id: `tx_${Date.now()}`,
-      type: 'Payment',
-      sender: payment.guest,
-      code: code,
-      amount: payment.amount,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    };
-    setTransactions(prev => [newTx, ...prev]);
+  const payout = payouts.find(p => p.id === id);
+  if (!payout || !payout.refCode.trim()) return;
 
-    // Remove from pending payments
-    setPayments(prev => prev.filter(p => p.id !== id));
-  };
+  const { status, body } = await markPayoutPaid(id, payout.refCode.trim(), token);
+  if (status !== 200) {
+    setPayoutsError(body?.message || 'Failed to mark payout as paid.');
+    return;
+  }
 
-  const handleMarkPaid = (id) => {
-    const payout = payouts.find(p => p.id === id);
-    if (!payout) return;
-
-    // Add to transaction log
-    const code = payout.refCode.trim() || `ETB-OUT-${Date.now().toString().slice(-6)}`;
-    const newTx = {
-      id: `tx_${Date.now()}`,
-      type: 'Payout',
-      recipient: payout.host,
-      code: code,
-      amount: payout.amount,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    };
-    setTransactions(prev => [newTx, ...prev]);
-
-    // Remove from pending payouts
-    setPayouts(prev => prev.filter(p => p.id !== id));
+  setPayouts(prev => prev.filter(p => p.id !== id));
+  // Real transaction log now comes from the backend — no local push needed here.
   };
 
   // Badge counts
@@ -300,20 +376,7 @@ const AdminDashboard = () => {
 
   // Total Bookings — monthly mock series backs both the "Booking Overview"
   // bar chart and the Total Bookings stat card, so the two stay consistent.
-  const bookingsByMonth = [
-    { month: 'Jan', bookings: 8 },
-    { month: 'Feb', bookings: 12 },
-    { month: 'Mar', bookings: 9 },
-    { month: 'Apr', bookings: 15 },
-    { month: 'May', bookings: 20 },
-    { month: 'Jun', bookings: 18 },
-  ];
-  const totalBookingsCount = bookingsByMonth.reduce((sum, m) => sum + m.bookings, 0);
-  const lastMonthBookings = bookingsByMonth[bookingsByMonth.length - 1].bookings;
-  const prevMonthBookings = bookingsByMonth[bookingsByMonth.length - 2].bookings;
-  const bookingsChangePct = prevMonthBookings
-    ? Math.round(((lastMonthBookings - prevMonthBookings) / prevMonthBookings) * 100)
-    : null;
+
 
   // Property Status — live counts from the listings state, so it updates
   // as listings get approved/rejected from the Listings tab.
@@ -491,20 +554,14 @@ const AdminDashboard = () => {
                   helper="Unique hosts & guests"
                   icon={Users}
                 />
+                
                 <OverviewCard
-                  label="Total Properties"
-                  value={totalListingsCount}
-                  helper="Listed on the platform"
-                  icon={Building2}
-                />
-                <OverviewCard
-                  label="Total Bookings"
-                  value={totalBookingsCount}
-                  helper="Jan – Jun 2026"
-                  icon={CalendarCheck}
-                  changeLabel={bookingsChangePct !== null ? `${bookingsChangePct >= 0 ? '+' : ''}${bookingsChangePct}%` : null}
-                  changePositive={bookingsChangePct >= 0}
-                />
+  label="Total Properties"
+  value={allListingsCount}
+  helper="Listed on the platform"
+  icon={Building2}
+/>
+                
                 <OverviewCard
                   label="Total Revenue"
                   value={`ETB ${totalTransactionVolume.toLocaleString()}`}
@@ -522,26 +579,7 @@ const AdminDashboard = () => {
 
               {/* Charts — side by side on desktop, stacked on mobile */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Booking Overview bar chart */}
-                <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
-                  <h3 className="text-[14px] font-bold text-gray-900 mb-1">Booking Overview</h3>
-                  <p className="text-[11px] text-gray-400 mb-4">Bookings per month</p>
-                  <div style={{ width: '100%', height: 240 }}>
-                    <ResponsiveContainer>
-                      <BarChart data={bookingsByMonth} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                        <Tooltip
-                          cursor={{ fill: A_LITE }}
-                          contentStyle={{ borderRadius: 12, border: '1px solid #eee', fontSize: 12 }}
-                          formatter={(value) => [`${value} bookings`, '']}
-                        />
-                        <Bar dataKey="bookings" fill={A} radius={[8, 8, 0, 0]} maxBarSize={44} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+            
 
                 {/* Property Status donut chart */}
                 <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs">
@@ -608,6 +646,11 @@ const AdminDashboard = () => {
 
           {activeTab === 'listings' && (
             <div className="space-y-4">
+              {listingsLoading && <div className="py-16 text-center text-gray-400 text-[14px]">Loading pending listings…</div>}
+{listingsError && <div className="py-4 text-center text-red-600 text-[13px]">{listingsError}</div>}
+{!listingsLoading && listings.length === 0 && !listingsError && (
+  <div className="py-16 text-center text-gray-400 text-[14px]">No pending listings.</div>
+)}
               {listings.map((list) => (
                 <div key={list.id} className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs relative">
                   <div className="flex justify-between items-start mb-2">
@@ -671,8 +714,10 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === 'payments' && (
-            <div className="space-y-4">
-              {payments.length === 0 ? (
+  <div className="space-y-4">
+    {paymentsLoading && <div className="py-16 text-center text-gray-400 text-[14px]">Loading pending payments…</div>}
+    {paymentsError && <div className="py-4 text-center text-red-600 text-[13px]">{paymentsError}</div>}
+    {!paymentsLoading && payments.length === 0 && !paymentsError ?  (
                 <div className="py-16 text-center text-gray-400 text-[14px]">
                   No pending payments to verify.
                 </div>
@@ -701,7 +746,16 @@ const AdminDashboard = () => {
                         {p.slaWarning}
                       </div>
                     )}
-
+                      {p.receiptImageUrl && (
+  <a
+    href={resolveFileUrl(p.receiptImageUrl)}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[12px] font-semibold text-primary hover:underline"
+  >
+    View payment screenshot
+  </a>
+)}
                     {/* Verification Input & Action */}
                     <div className="space-y-2 mt-2">
                       <input
@@ -713,86 +767,93 @@ const AdminDashboard = () => {
                         )}
                         className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-400"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleConfirmPayment(p.id)}
-                        disabled={!p.refCode.trim()}
-                        className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-colors ${
-                          p.refCode.trim()
-                            ? 'bg-primary hover:bg-[#c82333]'
-                            : 'bg-primary/40 cursor-not-allowed'
-                        }`}
-                      >
+                      <div className="flex gap-3 mt-2">
+  <button
+    type="button"
+    onClick={() => handleRejectPayment(p.id)}
+    className="flex-1 py-2.5 rounded-xl border border-primary text-primary font-bold text-[13px] hover:bg-red-50/50 transition-colors"
+  >
+    Reject
+  </button>
+  <button
+    type="button"
+    onClick={() => handleConfirmPayment(p.id)}
+    disabled={!p.refCode.trim()}
+    className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] text-white transition-colors ${
+      p.refCode.trim()
+        ? 'bg-primary hover:bg-[#c82333]'
+        : 'bg-primary/40 cursor-not-allowed'
+    }`}
+  >
+                    
                         Confirm payment
                       </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {activeTab === 'payouts' && (
-            <div className="space-y-4">
-              {payouts.length === 0 ? (
-                <div className="py-16 text-center text-gray-400 text-[14px]">
-                  No pending payouts due.
                 </div>
-              ) : (
-                payouts.map((p) => (
-                  <div key={p.id} className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs flex flex-col gap-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
-                          Host: {p.host}
-                        </h3>
-                        <p className="text-[11px] text-gray-400 mt-1">
-                          Booking total ETB {p.total.toFixed(2)} · Commission {p.commissionPercent}% (ETB {p.commissionAmount.toFixed(2)})
-                        </p>
-                      </div>
-                      <span className="text-[15px] font-extrabold text-gray-900">
-                        ETB {p.amount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* SLA Indicator */}
-                    <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${
-                      p.isWarning ? 'text-red-600' : 'text-gray-500'
-                    }`}>
-                      {p.isWarning ? <AlertCircle size={14} /> : <Clock size={14} />}
-                      {p.slaText}
-                    </div>
-
-                    {/* Verification Input & Action */}
-                    <div className="space-y-2 mt-2">
-                      <input
-                        type="text"
-                        placeholder="Transaction / reference code"
-                        value={p.refCode}
-                        onChange={(e) => setPayouts(prev =>
-                          prev.map(item => item.id === p.id ? { ...item, refCode: e.target.value } : item)
-                        )}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleMarkPaid(p.id)}
-                        disabled={!p.refCode.trim()}
-                        className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-colors ${
-                          p.refCode.trim()
-                            ? 'bg-primary hover:bg-[#c82333]'
-                            : 'bg-primary/40 cursor-not-allowed'
-                        }`}
-                      >
-                        Mark paid
-                      </button>
-                    </div>
-                  </div>
-                ))
+                ))  
               )}
-            </div>
+              </div>
           )}
+          {activeTab === 'payouts' && (
+  <div className="space-y-4">
+    {payoutsLoading && <div className="py-16 text-center text-gray-400 text-[14px]">Loading due payouts…</div>}
+    {payoutsError && <div className="py-4 text-center text-red-600 text-[13px]">{payoutsError}</div>}
+    {!payoutsLoading && payouts.length === 0 && !payoutsError ? (
+      <div className="py-16 text-center text-gray-400 text-[14px]">
+        No pending payouts due.
+      </div>
+    ) : (
+      payouts.map((p) => (
+  <div key={p.id} className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-xs flex flex-col gap-3">
+    <div className="flex justify-between items-start">
+      <div>
+        <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
+          Host: {p.host}
+        </h3>
+        <p className="text-[11px] text-gray-400 mt-1">Payout amount</p>
+      </div>
+      <span className="text-[15px] font-extrabold text-gray-900">
+        ETB {p.amount.toFixed(2)}
+      </span>
+    </div>
 
+    <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${
+      p.isWarning ? 'text-red-600' : 'text-gray-500'
+    }`}>
+      {p.isWarning ? <AlertCircle size={14} /> : <Clock size={14} />}
+      {p.slaText}
+    </div>
+
+    <div className="space-y-2 mt-2">
+      <input
+        type="text"
+        placeholder="Transaction / reference code"
+        value={p.refCode}
+        onChange={(e) => setPayouts(prev =>
+          prev.map(item => item.id === p.id ? { ...item, refCode: e.target.value } : item)
+        )}
+        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-400"
+      />
+      <button
+        type="button"
+        onClick={() => handleMarkPaid(p.id)}
+        disabled={!p.refCode.trim()}
+        className={`w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-colors ${
+          p.refCode.trim()
+            ? 'bg-primary hover:bg-[#c82333]'
+            : 'bg-primary/40 cursor-not-allowed'
+        }`}
+      >
+        Mark paid
+      </button>
+    </div>
+  </div>
+))
+    )}
+  </div>
+          )}
+    
           {activeTab === 'transactions' && (
             <div className="space-y-3">
               {transactions.map((tx) => (
